@@ -9,14 +9,14 @@ import pytest
 import rsa
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from locksmith.core.keys import FileSigner
+from locksmith.core.keys import FileSigner, generate_keypair
 import locksmith.core.store as store
 
 
 @pytest.fixture(scope="session")
 def keypair() -> tuple[rsa.PublicKey, rsa.PrivateKey]:
-    """Generate a 2048-bit keypair once per test session."""
-    return rsa.newkeys(2048)
+    """Generate a 512-bit keypair once per test session."""
+    return generate_keypair(512)
 
 
 @pytest.fixture(scope="session")

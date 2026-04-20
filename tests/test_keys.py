@@ -7,11 +7,11 @@ import os
 import pytest
 import rsa
 
-from locksmith.core.keys import generate_keypair, save_keypair
+from locksmith.core.keys import save_keypair
 
 
-def test_generate_keypair_returns_public_then_private():
-    pubkey, privkey = generate_keypair(512)
+def test_generate_keypair_returns_public_then_private(keypair):
+    pubkey, privkey = keypair
 
     assert isinstance(pubkey, rsa.PublicKey)
     assert isinstance(privkey, rsa.PrivateKey)
