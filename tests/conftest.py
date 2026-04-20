@@ -15,8 +15,8 @@ import locksmith.core.store as store
 
 @pytest.fixture(scope="session")
 def keypair() -> tuple[rsa.PublicKey, rsa.PrivateKey]:
-    """Generate a 512-bit keypair once per test session."""
-    return generate_keypair(512)
+    """Generate a 2048-bit keypair once per test session."""
+    return generate_keypair(2048)
 
 
 @pytest.fixture(scope="session")
