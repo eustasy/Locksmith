@@ -97,7 +97,7 @@ class FileSigner(BaseSigner):
         with pubkey_path.open("rb") as f:
             pubkey = rsa.PublicKey.load_pkcs1(f.read())
 
-        return cls(privkey, pubkey)
+        return cls(pubkey, privkey)
 
 
 # ---------------------------------------------------------------------------
