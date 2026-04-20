@@ -351,6 +351,3 @@ async def test_verify_only_signer_cannot_sign(verify_only_signer):
     lic = _make_license()
     with pytest.raises(ValueError, match="no private key"):
         await sign_license(lic, verify_only_signer)
-
-
-from datetime import datetime, timedelta, timezone

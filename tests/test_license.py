@@ -221,19 +221,6 @@ def test_license_request_roundtrip():
     assert restored.app_id == "com.example.app"
 
 
-import json
-from datetime import datetime, timedelta, timezone
-
-from locksmith.core.license import (
-    Entitlement,
-    License,
-    LicenseRequest,
-    RestrictionMode,
-    TimePolicy,
-    VersionPolicy,
-)
-
-
 def _make_license(**overrides) -> License:
     defaults = dict(
         license_id="test-id-001",

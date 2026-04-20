@@ -17,9 +17,6 @@ from locksmith.api.schemas import IssueRequest, LicenseMetadata
 from locksmith.core.license import (
     Entitlement,
     License,
-    TimePolicy,
-    VersionPolicy,
-    RestrictionMode,
 )
 from locksmith.core.signer import sign_license
 from locksmith.core.store import (
@@ -113,8 +110,5 @@ async def revoke_license_endpoint(license_id: str) -> None:
         raise HTTPException(status_code=404, detail="License not found.")
 
 
-import uuid
-from datetime import datetime, timezone
-
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, status
 from fastapi.responses import PlainTextResponse

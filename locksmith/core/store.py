@@ -282,9 +282,6 @@ async def save_request(session: AsyncSession, req: LicenseRequest) -> DBLicenseR
     return row
 
 
-from datetime import datetime, timezone
-from typing import Optional
-
 from sqlalchemy import (
     Boolean,
     DateTime,
@@ -293,17 +290,8 @@ from sqlalchemy import (
     JSON,
     String,
     UniqueConstraint,
-    func,
-    select,
 )
-from sqlalchemy.ext.asyncio import (
-    AsyncSession,
-    async_sessionmaker,
-    create_async_engine,
-)
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-
-from .license import License, LicenseRequest
+from sqlalchemy.orm import DeclarativeBase, mapped_column, relationship
 
 
 # ---------------------------------------------------------------------------

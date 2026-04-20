@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 
 import pytest
 import rsa
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from locksmith.core.keys import FileSigner
 from locksmith.core.store import Base

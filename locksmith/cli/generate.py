@@ -16,9 +16,7 @@ from locksmith.core.license import (
     Entitlement,
     License,
     LicenseRequest,
-    RestrictionMode,
     TimePolicy,
-    VersionPolicy,
 )
 from locksmith.core.signer import sign_license
 
