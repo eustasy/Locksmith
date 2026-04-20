@@ -44,7 +44,7 @@ def test_save_keypair_sets_private_and_public_key_permissions(keypair, tmp_path)
     assert loaded_privkey == privkey
     assert loaded_pubkey == pubkey
 
-		
+
 @pytest.mark.skipif(
     os.name == "posix",
     reason="Non-POSIX coverage for save_keypair behavior",
