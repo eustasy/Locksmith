@@ -38,8 +38,8 @@ def _get_machine_id_linux() -> str:
 
 
 def _get_machine_id_windows() -> str:
-    try:
-        if winreg is not None:
+    if winreg is not None:
+        try:
             key = winreg.OpenKey(
                 winreg.HKEY_LOCAL_MACHINE,
                 r"SOFTWARE\Microsoft\Cryptography",
@@ -48,8 +48,8 @@ def _get_machine_id_windows() -> str:
             winreg.CloseKey(key)
             if value:
                 return str(value)
-    except OSError:
-        pass  # Registry key unavailable; fall back to wmic
+        except OSError:
+            pass  # Registry key unavailable; fall back to wmic
 
     try:
         result = subprocess.run(

@@ -26,6 +26,23 @@ def test_windows_falls_back_to_empty_if_wmic_unavailable(monkeypatch):
     assert machine._get_machine_id_windows() == ""
 
 
+def test_windows_falls_back_to_wmic_if_registry_unavailable(monkeypatch):
+    class _Winreg:
+        HKEY_LOCAL_MACHINE = object()
+
+        @staticmethod
+        def OpenKey(*_args, **_kwargs):
+            raise OSError("registry unavailable")
+
+    class _Result:
+        stdout = "UUID\nwmic-uuid\n"
+
+    monkeypatch.setattr(machine, "winreg", _Winreg)
+    monkeypatch.setattr(machine.subprocess, "run", lambda *_args, **_kwargs: _Result())
+
+    assert machine._get_machine_id_windows() == "wmic-uuid"
+
+
 def test_macos_returns_empty_if_ioreg_fails(monkeypatch):
     def _raise_subprocess_error(*_args, **_kwargs):
         raise machine.subprocess.SubprocessError("ioreg failed")
