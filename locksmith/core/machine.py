@@ -7,7 +7,14 @@ Supported platforms: Linux, Windows, macOS.
 from __future__ import annotations
 
 import hashlib
+import os
+import subprocess
 import sys
+
+try:
+    import winreg  # type: ignore[attr-defined]
+except ImportError:
+    winreg = None
 
 
 def _get_machine_id_linux() -> str:
@@ -21,8 +28,6 @@ def _get_machine_id_linux() -> str:
         except OSError:
             pass  # File not found or unreadable; try next path
 
-    import os
-
     for path in ("/bin", "/etc", "/lib", "/root", "/sbin", "/usr", "/var"):
         try:
             sources.append(str(os.stat(path).st_ino))
@@ -34,20 +39,17 @@ def _get_machine_id_linux() -> str:
 
 def _get_machine_id_windows() -> str:
     try:
-        import winreg
-
-        key = winreg.OpenKey(
-            winreg.HKEY_LOCAL_MACHINE,
-            r"SOFTWARE\Microsoft\Cryptography",
-        )
-        value, _ = winreg.QueryValueEx(key, "MachineGuid")
-        winreg.CloseKey(key)
-        if value:
-            return str(value)
-    except Exception:
+        if winreg is not None:
+            key = winreg.OpenKey(
+                winreg.HKEY_LOCAL_MACHINE,
+                r"SOFTWARE\Microsoft\Cryptography",
+            )
+            value, _ = winreg.QueryValueEx(key, "MachineGuid")
+            winreg.CloseKey(key)
+            if value:
+                return str(value)
+    except OSError:
         pass  # Registry key unavailable; fall back to wmic
-
-    import subprocess
 
     try:
         result = subprocess.run(
@@ -59,15 +61,13 @@ def _get_machine_id_windows() -> str:
         lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
         if len(lines) >= 2:
             return lines[1]
-    except Exception:
+    except (OSError, subprocess.SubprocessError):
         pass  # wmic unavailable or failed; return empty string
 
     return ""
 
 
 def _get_machine_id_macos() -> str:
-    import subprocess
-
     try:
         result = subprocess.run(
             ["ioreg", "-rd1", "-c", "IOPlatformExpertDevice"],
@@ -80,7 +80,7 @@ def _get_machine_id_macos() -> str:
                 parts = line.split("=", 1)
                 if len(parts) == 2:
                     return parts[1].strip().strip('"')
-    except Exception:
+    except (OSError, subprocess.SubprocessError):
         pass  # ioreg unavailable or failed; return empty string
 
     return ""
