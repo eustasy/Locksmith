@@ -36,7 +36,7 @@ def test_save_keypair_sets_private_and_public_key_permissions(keypair, tmp_path)
     assert pub_path.exists()
     assert priv_path.stat().st_mode & 0o777 == 0o600
     assert pub_path.stat().st_mode & 0o777 == 0o644
-    		
+	
     loaded_privkey = rsa.PrivateKey.load_pkcs1(priv_path.read_bytes())
     loaded_pubkey = rsa.PublicKey.load_pkcs1(pub_path.read_bytes())
     assert loaded_privkey == privkey
