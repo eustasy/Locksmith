@@ -15,8 +15,8 @@ from locksmith.core.store import Base
 
 @pytest.fixture(scope="session")
 def keypair() -> tuple[rsa.PrivateKey, rsa.PublicKey]:
-    """Generate a small (1024-bit) keypair once per test session for speed."""
-    pubkey, privkey = rsa.newkeys(1024)
+    """Generate a 2048-bit keypair once per test session."""
+    pubkey, privkey = rsa.newkeys(2048)
     return privkey, pubkey
 
 
