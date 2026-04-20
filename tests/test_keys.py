@@ -45,6 +45,15 @@ def test_save_keypair_sets_private_and_public_key_permissions(keypair, tmp_path)
     assert loaded_pubkey == pubkey
 
 
+def test_save_keypair_raises_when_target_path_is_not_a_directory(keypair, tmp_path):
+    pubkey, privkey = keypair
+    not_a_directory = tmp_path / "not_a_directory"
+    not_a_directory.write_text("this is a file, not a directory")
+
+    with pytest.raises(OSError):
+        save_keypair(pubkey, privkey, not_a_directory)
+
+
 @pytest.mark.skipif(
     os.name == "posix",
     reason="Non-POSIX coverage for save_keypair behavior",
@@ -61,3 +70,17 @@ def test_save_keypair_creates_and_roundtrips_keys_on_non_posix(keypair, tmp_path
 
     assert loaded_privkey == privkey
     assert loaded_pubkey == pubkey
+
+
+def test_load_pkcs1_raises_for_corrupted_key_files(tmp_path):
+    priv_path = tmp_path / "id_rsa"
+    pub_path = tmp_path / "id_rsa.pub"
+
+    priv_path.write_bytes(b"not-a-valid-private-key")
+    pub_path.write_bytes(b"not-a-valid-public-key")
+
+    with pytest.raises((ValueError, IndexError, TypeError)):
+        rsa.PrivateKey.load_pkcs1(priv_path.read_bytes())
+
+    with pytest.raises((ValueError, IndexError, TypeError)):
+        rsa.PublicKey.load_pkcs1(pub_path.read_bytes())
