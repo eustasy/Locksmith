@@ -1,7 +1,6 @@
 # MIT License
 
-Copyright &copy; 2023 [eustasy](https://eustasy.org)
-Copyright &copy; Cryptolens AB and Contributors
+Copyright &copy; 2026 [eustasy](https://eustasy.org)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
