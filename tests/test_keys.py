@@ -24,7 +24,10 @@ def test_keypair_fixture_has_valid_rsa_keys(keypair):
     phi_n = (privkey.p - 1) * (privkey.q - 1)
     assert (privkey.d * privkey.e) % phi_n == 1
 
-
+@pytest.mark.skipif(
+    os.name != "posix",
+    reason="POSIX file mode bits are not portable to Windows",
+)
 def test_save_keypair_sets_private_and_public_key_permissions(keypair, tmp_path):
     pubkey, privkey = keypair
     priv_path, pub_path = save_keypair(pubkey, privkey, tmp_path)
@@ -32,9 +35,8 @@ def test_save_keypair_sets_private_and_public_key_permissions(keypair, tmp_path)
     assert priv_path.exists()
     assert pub_path.exists()
 
-    if os.name == "posix":
-        assert priv_path.stat().st_mode & 0o777 == 0o600
-        assert pub_path.stat().st_mode & 0o777 == 0o644
+    assert priv_path.stat().st_mode & 0o777 == 0o600
+    assert pub_path.stat().st_mode & 0o777 == 0o644
 
     loaded_privkey = rsa.PrivateKey.load_pkcs1(priv_path.read_bytes())
     loaded_pubkey = rsa.PublicKey.load_pkcs1(pub_path.read_bytes())
