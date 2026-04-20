@@ -118,18 +118,29 @@ def save_keypair(
     privkey: rsa.PrivateKey,
     out_dir: Path | str,
 ) -> tuple[Path, Path]:
-    """Write PKCS#1 PEM files and set restrictive permissions on POSIX systems."""
+    """Write PKCS#1 PEM files and set restrictive permissions on POSIX systems.
+
+    Returns ``(privkey_path, pubkey_path)``.
+    """
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     privkey_path = out_dir / "privkey.pem"
     pubkey_path = out_dir / "pubkey.pem"
 
-    privkey_path.write_bytes(privkey.save_pkcs1())
+    privkey_bytes = privkey.save_pkcs1()
+    if os.name == "posix":
+        flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+        if hasattr(os, "O_CLOEXEC"):
+            flags |= os.O_CLOEXEC
+        fd = os.open(privkey_path, flags, stat.S_IRUSR | stat.S_IWUSR)  # 0600
+        with os.fdopen(fd, "wb") as f:
+            f.write(privkey_bytes)
+    else:
+        privkey_path.write_bytes(privkey_bytes)
     pubkey_path.write_bytes(pubkey.save_pkcs1())
 
     if os.name == "posix":
-        os.chmod(privkey_path, stat.S_IRUSR | stat.S_IWUSR)  # 0600
         os.chmod(
             pubkey_path,
             stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH,
