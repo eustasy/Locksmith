@@ -47,10 +47,15 @@ def test_db():
 
 @pytest.fixture(scope="session")
 def test_app(keypair, test_db):
+    import locksmith.core.store as _store
     from locksmith.api.app import create_app
 
     privkey, pubkey = keypair
     session_factory = async_sessionmaker(test_db, expire_on_commit=False)
+
+    # Wire the test engine into the store module so get_session() works
+    _store._engine = test_db
+    _store._async_session = session_factory
 
     @asynccontextmanager
     async def _lifespan(app):
@@ -59,4 +64,7 @@ def test_app(keypair, test_db):
         yield
 
     app = create_app(lifespan=_lifespan)
+    # Pre-populate state for transports that don't trigger lifespan (e.g. ASGITransport)
+    app.state.session_factory = session_factory
+    app.state.signer = FileSigner(privkey=privkey, pubkey=pubkey)
     return app

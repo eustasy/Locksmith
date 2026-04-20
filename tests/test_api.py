@@ -50,17 +50,24 @@ async def test_health(client):
 @pytest.mark.asyncio
 async def test_issue_requires_auth(client):
     resp = await client.post("/licenses", json={})
-    assert resp.status_code == 403  # no bearer token
+    assert resp.status_code in (401, 403)  # no bearer token (starlette 1.x returns 401)
 
 
 @pytest.mark.asyncio
 async def test_issue_bad_key(client):
-    resp = await client.post(
-        "/licenses",
-        json={},
-        headers={"Authorization": "Bearer wrongkey"},
-    )
-    assert resp.status_code == 401
+    from locksmith.core.config import settings
+
+    original = settings.admin_api_key
+    settings.admin_api_key = "somekey"
+    try:
+        resp = await client.post(
+            "/licenses",
+            json={},
+            headers={"Authorization": "Bearer wrongkey"},
+        )
+        assert resp.status_code == 401
+    finally:
+        settings.admin_api_key = original
 
 
 @pytest.mark.asyncio
