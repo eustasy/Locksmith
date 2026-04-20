@@ -10,14 +10,19 @@ import rsa
 from locksmith.core.keys import save_keypair
 
 
-def test_generate_keypair_returns_matching_rsa_public_private_keys(keypair):
+def test_keypair_fixture_returns_matching_rsa_public_private_keys(keypair):
     pubkey, privkey = keypair
 
     assert isinstance(pubkey, rsa.PublicKey)
     assert isinstance(privkey, rsa.PrivateKey)
     assert pubkey.n == privkey.n
     assert pubkey.e == privkey.e
-    assert pubkey.n.bit_length() == 2048
+    assert privkey.d > 0
+    assert privkey.p > 0
+    assert privkey.q > 0
+    assert privkey.p * privkey.q == privkey.n
+    phi_n = (privkey.p - 1) * (privkey.q - 1)
+    assert (privkey.d * privkey.e) % phi_n == 1
 
 
 def test_save_keypair_sets_private_and_public_key_permissions(keypair, tmp_path):
