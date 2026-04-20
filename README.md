@@ -1,6 +1,9 @@
 Locksmith
 =========
 
+[![Tests](https://github.com/eustasy/Locksmith/actions/workflows/test.yml/badge.svg)](https://github.com/eustasy/Locksmith/actions/workflows/test.yml)
+[![Lint](https://github.com/eustasy/Locksmith/actions/workflows/lint.yml/badge.svg)](https://github.com/eustasy/Locksmith/actions/workflows/lint.yml)
+
 Cross-platform software license validation backend. Supports online activation
 via a REST API and fully offline validation via signed license files. No frontend
 is provided — integrate against the API or ship the public key with your application.
