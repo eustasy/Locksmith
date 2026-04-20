@@ -47,8 +47,8 @@ class FileSigner(BaseSigner):
 
     def __init__(
         self,
-        privkey: rsa.PrivateKey | None,
         pubkey: rsa.PublicKey,
+        privkey: rsa.PrivateKey | None,
     ) -> None:
         self._privkey = privkey
         self._pubkey = pubkey
@@ -105,20 +105,17 @@ class FileSigner(BaseSigner):
 # ---------------------------------------------------------------------------
 
 
-def generate_keypair(bits: int = 4096) -> tuple[rsa.PrivateKey, rsa.PublicKey]:
-    """Generate a new RSA keypair.
+def generate_keypair(bits: int = 4096) -> tuple[rsa.PublicKey, rsa.PrivateKey]:
+    """Generate a new RSA keypair. Returns ``(pubkey, privkey)`` matching ``rsa.newkeys()``.
 
-    Note: `rsa.newkeys()` returns `(public_key, private_key)`, but this helper
-    intentionally returns `(private_key, public_key)` to match the local API.
     Blocking — run in a thread for async contexts.
     """
-    public_key, private_key = rsa.newkeys(bits)
-    return private_key, public_key
+    return rsa.newkeys(bits)
 
 
 def save_keypair(
-    privkey: rsa.PrivateKey,
     pubkey: rsa.PublicKey,
+    privkey: rsa.PrivateKey,
     out_dir: Path | str,
 ) -> tuple[Path, Path]:
     """Write PKCS#1 PEM files and set restrictive permissions on POSIX systems."""

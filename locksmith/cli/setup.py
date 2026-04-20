@@ -27,8 +27,8 @@ def main(bits: int, out_dir: str) -> None:
     to source control. Distribute pubkey.pem with your application.
     """
     click.echo(f"Generating {bits}-bit RSA keypair. This may take a few minutes...")
-    privkey, pubkey = generate_keypair(bits)
-    priv_path, pub_path = save_keypair(privkey, pubkey, out_dir)
+    pubkey, privkey = generate_keypair(bits)
+    priv_path, pub_path = save_keypair(pubkey, privkey, out_dir)
 
     click.echo(f"  Private key : {priv_path}")
     click.echo(f"  Public key  : {pub_path}")
