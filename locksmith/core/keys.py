@@ -106,9 +106,14 @@ class FileSigner(BaseSigner):
 
 
 def generate_keypair(bits: int = 4096) -> tuple[rsa.PrivateKey, rsa.PublicKey]:
-    """Generate a new RSA keypair. Blocking — run in a thread for async contexts."""
-    pubkey, privkey = rsa.newkeys(bits)
-    return privkey, pubkey
+    """Generate a new RSA keypair.
+
+    Note: `rsa.newkeys()` returns `(public_key, private_key)`, but this helper
+    intentionally returns `(private_key, public_key)` to match the local API.
+    Blocking — run in a thread for async contexts.
+    """
+    public_key, private_key = rsa.newkeys(bits)
+    return private_key, public_key
 
 
 def save_keypair(
@@ -128,6 +133,9 @@ def save_keypair(
 
     if os.name == "posix":
         os.chmod(privkey_path, stat.S_IRUSR | stat.S_IWUSR)  # 0600
-        os.chmod(pubkey_path, stat.S_IRUSR)  # 0400
+        os.chmod(
+            pubkey_path,
+            stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH,
+        )  # 0644
 
     return privkey_path, pubkey_path
