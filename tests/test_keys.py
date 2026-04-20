@@ -10,16 +10,17 @@ import rsa
 from locksmith.core.keys import save_keypair
 
 
-def test_generate_keypair_returns_public_then_private(keypair):
+def test_generate_keypair_returns_matching_rsa_public_private_keys(keypair):
     pubkey, privkey = keypair
 
     assert isinstance(pubkey, rsa.PublicKey)
     assert isinstance(privkey, rsa.PrivateKey)
     assert pubkey.n == privkey.n
     assert pubkey.e == privkey.e
+    assert pubkey.n.bit_length() == 2048
 
 
-def test_save_keypair_sets_public_key_permissions(keypair, tmp_path):
+def test_save_keypair_sets_private_and_public_key_permissions(keypair, tmp_path):
     if os.name != "posix":
         pytest.skip("POSIX-only permission assertion")
 
