@@ -107,7 +107,8 @@ class FileSigner(BaseSigner):
 
 def generate_keypair(bits: int = 4096) -> tuple[rsa.PrivateKey, rsa.PublicKey]:
     """Generate a new RSA keypair. Blocking — run in a thread for async contexts."""
-    return rsa.newkeys(bits)
+    pubkey, privkey = rsa.newkeys(bits)
+    return privkey, pubkey
 
 
 def save_keypair(
