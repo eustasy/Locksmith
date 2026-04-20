@@ -41,7 +41,7 @@ def test_db():
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
-    asyncio.get_event_loop().run_until_complete(_setup())
+    asyncio.run(_setup())
     return engine
 
 

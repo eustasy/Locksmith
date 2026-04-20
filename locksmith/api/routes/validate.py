@@ -30,7 +30,7 @@ def _check_extension(filename: str | None, expected: str) -> None:
     suffix = Path(filename or "").suffix.lower()
     if suffix != expected:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Invalid file type '{suffix}'. Expected '{expected}'.",
         )
 
