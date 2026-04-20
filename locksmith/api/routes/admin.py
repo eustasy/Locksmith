@@ -108,7 +108,3 @@ async def revoke_license_endpoint(license_id: str) -> None:
         ok = await revoke_license(session, license_id)
     if not ok:
         raise HTTPException(status_code=404, detail="License not found.")
-
-
-from fastapi import APIRouter, Depends, status
-from fastapi.responses import PlainTextResponse

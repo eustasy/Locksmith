@@ -130,3 +130,7 @@ dmypy.json
 
 # Ruff linter
 .ruff_cache/
+
+### Locksmith specific ignores
+keys/
+locksmith.db

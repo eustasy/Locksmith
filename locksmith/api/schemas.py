@@ -107,6 +107,3 @@ class LicenseMetadata(BaseModel):
     entitlements: list[EntitlementSchema]
     revoked: bool
     active_count: int
-
-
-from pydantic import BaseModel, Field

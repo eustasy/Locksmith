@@ -221,54 +221,8 @@ def test_license_request_roundtrip():
     assert restored.app_id == "com.example.app"
 
 
-def _make_license(**overrides) -> License:
-    defaults = dict(
-        license_id="test-id-001",
-        email="test@example.com",
-        issued_at=datetime.now(timezone.utc),
-        valid_from=datetime.now(timezone.utc),
-        signature="fakesig==",
-    )
-    defaults.update(overrides)
-    return License(**defaults)
-
-
 # ---------------------------------------------------------------------------
-# Core roundtrip
-# ---------------------------------------------------------------------------
-
-
-def test_roundtrip_json():
-    lic = _make_license(activation_limit=5)
-    restored = License.from_json(lic.to_json())
-    assert restored.license_id == lic.license_id
-    assert restored.email == lic.email
-    assert restored.activation_limit == 5
-    assert restored.time_policy == TimePolicy.PERPETUAL
-    assert restored.signature == lic.signature
-
-
-def test_signable_payload_excludes_signature():
-    lic = _make_license(signature="should_not_appear")
-    payload = json.loads(lic.signable_payload())
-    assert "signature" not in payload
-
-
-def test_signable_payload_includes_entitlements():
-    ent = Entitlement(app_id="com.example.app", editions=["pro"], seats=3)
-    lic = _make_license(entitlements=[ent])
-    payload = json.loads(lic.signable_payload())
-    assert "entitlements" in payload
-    assert payload["entitlements"][0]["app_id"] == "com.example.app"
-
-
-def test_signable_payload_is_deterministic():
-    lic = _make_license()
-    assert lic.signable_payload() == lic.signable_payload()
-
-
-# ---------------------------------------------------------------------------
-# Time policy
+# Time policy (additional)
 # ---------------------------------------------------------------------------
 
 
@@ -277,24 +231,9 @@ def test_perpetual_roundtrip():
     assert License.from_json(lic.to_json()).time_policy == TimePolicy.PERPETUAL
 
 
-def test_limited_roundtrip():
-    expires = datetime.now(timezone.utc) + timedelta(days=365)
-    lic = _make_license(time_policy=TimePolicy.LIMITED, expires_at=expires)
-    restored = License.from_json(lic.to_json())
-    assert restored.time_policy == TimePolicy.LIMITED
-    assert restored.expires_at is not None
-
-
 # ---------------------------------------------------------------------------
-# Version policy
+# Version policy (additional)
 # ---------------------------------------------------------------------------
-
-
-def test_maintenance_roundtrip():
-    lic = _make_license(version_policy=VersionPolicy.MAINTENANCE, major_version=3)
-    restored = License.from_json(lic.to_json())
-    assert restored.version_policy == VersionPolicy.MAINTENANCE
-    assert restored.major_version == 3
 
 
 def test_specific_roundtrip():
@@ -361,72 +300,8 @@ def test_no_restriction_roundtrip():
 
 
 # ---------------------------------------------------------------------------
-# Entitlements
+# License request (additional)
 # ---------------------------------------------------------------------------
-
-
-def test_entitlement_roundtrip():
-    ent = Entitlement(
-        app_id="com.example.app",
-        editions=["Professional", "Enterprise"],
-        min_version="2.0.0",
-        max_version="2.9.9",
-        platforms=["Windows", "Linux"],
-        seats=5,
-    )
-    restored = Entitlement.from_dict(ent.to_dict())
-    assert restored.app_id == "com.example.app"
-    assert restored.editions == ["professional", "enterprise"]
-    assert restored.platforms == ["windows", "linux"]
-    assert restored.seats == 5
-    assert restored.min_version == "2.0.0"
-
-
-def test_entitlement_none_fields_preserved():
-    ent = Entitlement(app_id="com.example.app")
-    d = ent.to_dict()
-    assert d["editions"] is None
-    assert d["platforms"] is None
-    assert d["seats"] is None
-
-
-def test_license_with_entitlements_roundtrip():
-    ent = Entitlement(app_id="com.example.app", editions=["pro"], seats=3)
-    lic = _make_license(entitlements=[ent])
-    restored = License.from_json(lic.to_json())
-    assert len(restored.entitlements) == 1
-    assert restored.entitlements[0].app_id == "com.example.app"
-    assert restored.entitlements[0].editions == ["pro"]
-    assert restored.entitlements[0].seats == 3
-
-
-def test_bundle_license_multiple_entitlements():
-    ents = [
-        Entitlement(app_id="com.example.app1", seats=2),
-        Entitlement(app_id="com.example.app2", platforms=["windows"], seats=10),
-    ]
-    lic = _make_license(entitlements=ents)
-    restored = License.from_json(lic.to_json())
-    assert len(restored.entitlements) == 2
-    assert restored.entitlements[1].platforms == ["windows"]
-
-
-# ---------------------------------------------------------------------------
-# LicenseRequest
-# ---------------------------------------------------------------------------
-
-
-def test_license_request_roundtrip():
-    req = LicenseRequest.new(
-        "user@co.com",
-        "abc123hash",
-        "2.0.0",
-        app_id="com.example.app",
-    )
-    restored = LicenseRequest.from_json(req.to_json())
-    assert restored.email == "user@co.com"
-    assert restored.machine_id == "abc123hash"
-    assert restored.app_id == "com.example.app"
 
 
 def test_license_request_no_machine_id():

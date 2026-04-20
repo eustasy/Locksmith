@@ -282,18 +282,6 @@ async def save_request(session: AsyncSession, req: LicenseRequest) -> DBLicenseR
     return row
 
 
-from sqlalchemy import (
-    Boolean,
-    DateTime,
-    ForeignKey,
-    Integer,
-    JSON,
-    String,
-    UniqueConstraint,
-)
-from sqlalchemy.orm import DeclarativeBase, mapped_column, relationship
-
-
 # ---------------------------------------------------------------------------
 # ORM models
 # ---------------------------------------------------------------------------
