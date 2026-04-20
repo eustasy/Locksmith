@@ -17,27 +17,31 @@ def test_stable_across_calls():
 def test_windows_falls_back_to_empty_if_wmic_unavailable(monkeypatch):
     monkeypatch.setattr(machine, "winreg", None)
 
-    def _raise_oserror(*_args, **_kwargs):
+    def _raise_os_error(*_args, **_kwargs):
         raise OSError("wmic not found")
 
-    monkeypatch.setattr(machine.subprocess, "run", _raise_oserror)
+    monkeypatch.setattr(machine.subprocess, "run", _raise_os_error)
 
     assert machine._get_machine_id_windows() == ""
 
 
 def test_windows_falls_back_to_wmic_if_registry_unavailable(monkeypatch):
-    class _Winreg:
+    class _MockWinreg:
         HKEY_LOCAL_MACHINE = object()
 
         @staticmethod
         def OpenKey(*_args, **_kwargs):
             raise OSError("registry unavailable")
 
-    class _Result:
+    class _MockSubprocessResult:
         stdout = "UUID\nwmic-uuid\n"
 
-    monkeypatch.setattr(machine, "winreg", _Winreg)
-    monkeypatch.setattr(machine.subprocess, "run", lambda *_args, **_kwargs: _Result())
+    monkeypatch.setattr(machine, "winreg", _MockWinreg)
+    monkeypatch.setattr(
+        machine.subprocess,
+        "run",
+        lambda *_args, **_kwargs: _MockSubprocessResult(),
+    )
 
     assert machine._get_machine_id_windows() == "wmic-uuid"
 
