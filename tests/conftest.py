@@ -10,7 +10,7 @@ import rsa
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from locksmith.core.keys import FileSigner
-from locksmith.core.store import Base
+import locksmith.core.store as store
 
 
 @pytest.fixture(scope="session")
@@ -39,7 +39,7 @@ def test_db():
 
     async def _setup():
         async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+            await conn.run_sync(store.Base.metadata.create_all)
 
     asyncio.run(_setup())
     return engine
@@ -47,15 +47,14 @@ def test_db():
 
 @pytest.fixture(scope="session")
 def test_app(keypair, test_db):
-    import locksmith.core.store as _store
     from locksmith.api.app import create_app
 
     privkey, pubkey = keypair
     session_factory = async_sessionmaker(test_db, expire_on_commit=False)
 
     # Wire the test engine into the store module so get_session() works
-    _store._engine = test_db
-    _store._async_session = session_factory
+    store._engine = test_db
+    store._async_session = session_factory
 
     @asynccontextmanager
     async def _lifespan(app):
