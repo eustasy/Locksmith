@@ -19,7 +19,7 @@ def _get_machine_id_linux() -> str:
                 sources.append(f.read().strip())
             break
         except OSError:
-            pass
+            pass  # File not found or unreadable; try next path
 
     import os
 
@@ -27,7 +27,7 @@ def _get_machine_id_linux() -> str:
         try:
             sources.append(str(os.stat(path).st_ino))
         except OSError:
-            pass
+            pass  # Directory inode unavailable; skip this source
 
     return "".join(sources)
 
@@ -45,7 +45,7 @@ def _get_machine_id_windows() -> str:
         if value:
             return str(value)
     except Exception:
-        pass
+        pass  # Registry key unavailable; fall back to wmic
 
     import subprocess
 
@@ -60,7 +60,7 @@ def _get_machine_id_windows() -> str:
         if len(lines) >= 2:
             return lines[1]
     except Exception:
-        pass
+        pass  # wmic unavailable or failed; return empty string
 
     return ""
 
@@ -81,7 +81,7 @@ def _get_machine_id_macos() -> str:
                 if len(parts) == 2:
                     return parts[1].strip().strip('"')
     except Exception:
-        pass
+        pass  # ioreg unavailable or failed; return empty string
 
     return ""
 
