@@ -27,7 +27,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-from .license import License, LicenseRequest
+from locksmith.core.license import License, LicenseRequest
 
 
 # ---------------------------------------------------------------------------

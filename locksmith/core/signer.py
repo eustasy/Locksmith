@@ -26,8 +26,8 @@ import base64
 from datetime import datetime, timezone
 from typing import Optional
 
-from .keys import BaseSigner
-from .license import Entitlement, License, VersionPolicy
+from locksmith.core.keys import BaseSigner
+from locksmith.core.license import Entitlement, License, VersionPolicy
 
 
 # ---------------------------------------------------------------------------
