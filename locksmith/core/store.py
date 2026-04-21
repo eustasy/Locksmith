@@ -280,8 +280,3 @@ async def save_request(session: AsyncSession, req: LicenseRequest) -> DBLicenseR
     session.add(row)
     await session.commit()
     return row
-
-
-# ---------------------------------------------------------------------------
-# ORM models
-# ---------------------------------------------------------------------------
