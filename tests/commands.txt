@@ -1,2 +1,0 @@
-cd /mnt/c/Users/lewis/Source/Github/eustasy/Locksmith && source .venv/bin/activate && python3 -m pytest tests/ -q 2>&1; echo "EXIT:$?"
-cd /mnt/c/Users/lewis/Source/Github/eustasy/Locksmith && source .venv/bin/activate && python3 -m pytest tests/ -q --tb=short 2>&1; echo "EXIT:$?"
