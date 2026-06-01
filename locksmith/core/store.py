@@ -6,15 +6,14 @@ async-compatible database URL (e.g. asyncpg for PostgreSQL in production).
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     DateTime,
     ForeignKey,
     Integer,
-    JSON,
     String,
     UniqueConstraint,
     func,
@@ -28,7 +27,6 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from locksmith.core.license import License, LicenseRequest
-
 
 # ---------------------------------------------------------------------------
 # ORM models
@@ -53,7 +51,7 @@ class DBLicense(Base):
     time_policy: Mapped[str] = mapped_column(
         String(20), nullable=False, default="perpetual"
     )
-    expires_at: Mapped[Optional[datetime]] = mapped_column(
+    expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
@@ -61,21 +59,21 @@ class DBLicense(Base):
     version_policy: Mapped[str] = mapped_column(
         String(20), nullable=False, default="any"
     )
-    major_version: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    locked_version: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    major_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    locked_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     # Edition / Platform (top-level defaults)
-    editions_json: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
-    platforms_json: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    editions_json: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    platforms_json: Mapped[list | None] = mapped_column(JSON, nullable=True)
 
     # Restriction
-    restriction: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
-    activation_limit: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    user_limit: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    concurrent_limit: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    restriction: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    activation_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    user_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    concurrent_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # Per-application entitlements
-    entitlements_json: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    entitlements_json: Mapped[list | None] = mapped_column(JSON, nullable=True)
 
     signature: Mapped[str] = mapped_column(String(2048), nullable=False)
     revoked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
@@ -109,7 +107,7 @@ class DBActivation(Base):
     activated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
-    revoked_at: Mapped[Optional[datetime]] = mapped_column(
+    revoked_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
@@ -123,8 +121,8 @@ class DBLicenseRequest(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     email: Mapped[str] = mapped_column(String(255), nullable=False)
-    machine_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
-    app_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    machine_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    app_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     app_version: Mapped[str] = mapped_column(String(32), nullable=False)
     requested_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
@@ -190,7 +188,7 @@ async def save_license(session: AsyncSession, lic: License) -> DBLicense:
     return row
 
 
-async def get_license(session: AsyncSession, license_id: str) -> Optional[DBLicense]:
+async def get_license(session: AsyncSession, license_id: str) -> DBLicense | None:
     result = await session.execute(
         select(DBLicense).where(DBLicense.license_id == license_id)
     )
@@ -242,7 +240,7 @@ async def record_activation(
         license_id=license_id,
         app_id=app_id,
         identity=identity,
-        activated_at=datetime.now(timezone.utc),
+        activated_at=datetime.now(UTC),
     )
     session.add(row)
     await session.commit()
@@ -264,7 +262,7 @@ async def revoke_activation(
     row = result.scalar_one_or_none()
     if row is None:
         return False
-    row.revoked_at = datetime.now(timezone.utc)
+    row.revoked_at = datetime.now(UTC)
     await session.commit()
     return True
 

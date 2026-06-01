@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -42,8 +42,8 @@ def create_app(lifespan=None) -> FastAPI:
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-    from locksmith.api.routes.admin import router as admin_router
     from locksmith.api.routes.activate import router as activate_router
+    from locksmith.api.routes.admin import router as admin_router
     from locksmith.api.routes.validate import router as validate_router
 
     app.include_router(admin_router, prefix="/licenses", tags=["admin"])
@@ -64,7 +64,7 @@ def serve() -> None:
     uvicorn.run(
         "locksmith.api.app:create_app",
         factory=True,
-        host="0.0.0.0",
-        port=8000,
+        host=settings.host,
+        port=settings.port,
         reload=False,
     )

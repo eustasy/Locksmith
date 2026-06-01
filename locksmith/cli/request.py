@@ -7,7 +7,6 @@ license without asking for it manually.
 
 from __future__ import annotations
 
-
 import click
 
 from locksmith.core.license import LicenseRequest

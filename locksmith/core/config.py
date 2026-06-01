@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     pubkey_path: Path = Path("keys/pubkey.pem")
     admin_api_key: str = ""
     db_url: str = "sqlite+aiosqlite:///./locksmith.db"
+    host: str = "0.0.0.0"  # noqa: S104 - bind all interfaces by default (server)
+    port: int = 8000
 
 
 settings = Settings()

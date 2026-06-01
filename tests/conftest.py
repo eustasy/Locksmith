@@ -9,8 +9,8 @@ import pytest
 import rsa
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from locksmith.core.keys import FileSigner, generate_keypair
 from locksmith.core import store
+from locksmith.core.keys import FileSigner, generate_keypair
 
 
 @pytest.fixture(scope="session")

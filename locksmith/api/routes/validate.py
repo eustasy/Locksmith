@@ -12,7 +12,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile, status
 
@@ -53,13 +52,13 @@ async def validate_offline(
 
     try:
         lic = License.from_json(content.decode("utf-8"))
-    except Exception:
-        raise HTTPException(status_code=422, detail="Could not parse license file.")
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail="Could not parse license file.") from exc
 
     try:
         from locksmith.core.license import Entitlement as _Ent
 
-        matched: Optional[_Ent] = await validate_license(
+        matched: _Ent | None = await validate_license(
             lic,
             request.app.state.signer,
             app_id=app_id or None,
@@ -100,8 +99,8 @@ async def submit_request(file: UploadFile = File(...)) -> dict:
 
     try:
         req = LicenseRequest.from_json(content.decode("utf-8"))
-    except Exception:
-        raise HTTPException(status_code=422, detail="Could not parse request file.")
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail="Could not parse request file.") from exc
 
     async with get_session() as session:
         await save_request(session, req)

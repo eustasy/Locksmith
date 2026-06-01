@@ -23,12 +23,10 @@ against database counts happens in ``routes/activate.py``.
 from __future__ import annotations
 
 import base64
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from locksmith.core.keys import BaseSigner
 from locksmith.core.license import Entitlement, License, VersionPolicy
-
 
 # ---------------------------------------------------------------------------
 # Exception hierarchy
@@ -122,13 +120,13 @@ async def validate_license(
     license: License,
     signer: BaseSigner,
     *,
-    machine_id: Optional[str] = None,
-    user_principal: Optional[str] = None,
-    app_id: Optional[str] = None,
-    app_version: Optional[str] = None,
-    edition: Optional[str] = None,
-    platform: Optional[str] = None,
-) -> Optional[Entitlement]:
+    machine_id: str | None = None,
+    user_principal: str | None = None,
+    app_id: str | None = None,
+    app_version: str | None = None,
+    edition: str | None = None,
+    platform: str | None = None,
+) -> Entitlement | None:
     """Validate a license end-to-end. Raises a ``LicenseError`` subclass on failure.
 
     Returns the matched ``Entitlement`` if the license has entitlements and one
@@ -137,12 +135,12 @@ async def validate_license(
     # 1. Signature — must always be first
     await verify_license_signature(license, signer)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # 2. Temporal validity
     valid_from = license.valid_from
     if valid_from.tzinfo is None:
-        valid_from = valid_from.replace(tzinfo=timezone.utc)
+        valid_from = valid_from.replace(tzinfo=UTC)
     if now < valid_from:
         raise LicenseNotYetValidError(
             f"License is not valid until {license.valid_from.isoformat()}."
@@ -151,7 +149,7 @@ async def validate_license(
     if license.expires_at is not None:
         expires_at = license.expires_at
         if expires_at.tzinfo is None:
-            expires_at = expires_at.replace(tzinfo=timezone.utc)
+            expires_at = expires_at.replace(tzinfo=UTC)
         if now > expires_at:
             raise LicenseExpiredError(
                 f"License expired on {license.expires_at.isoformat()}."
@@ -181,7 +179,7 @@ async def validate_license(
             )
 
     # 4. Entitlement matching
-    matched: Optional[Entitlement] = None
+    matched: Entitlement | None = None
 
     if license.entitlements:
         if app_id is None:
@@ -207,12 +205,11 @@ async def validate_license(
         if (matched is not None and matched.editions is not None)
         else license.editions
     )
-    if eff_editions is not None:
-        if edition is None or edition.lower() not in eff_editions:
-            raise LicenseEditionError(
-                f"Edition '{edition}' is not permitted. "
-                f"Allowed editions: {', '.join(eff_editions)}."
-            )
+    if eff_editions is not None and (edition is None or edition.lower() not in eff_editions):
+        raise LicenseEditionError(
+            f"Edition '{edition}' is not permitted. "
+            f"Allowed editions: {', '.join(eff_editions)}."
+        )
 
     # 6. Effective platform check (same fallback logic)
     eff_platforms = (
@@ -220,29 +217,26 @@ async def validate_license(
         if (matched is not None and matched.platforms is not None)
         else license.platforms
     )
-    if eff_platforms is not None:
-        if platform is None or platform.lower() not in eff_platforms:
-            raise LicenseOSError(
-                f"Platform '{platform}' is not permitted. "
-                f"Allowed platforms: {', '.join(eff_platforms)}."
-            )
+    if eff_platforms is not None and (platform is None or platform.lower() not in eff_platforms):
+        raise LicenseOSError(
+            f"Platform '{platform}' is not permitted. "
+            f"Allowed platforms: {', '.join(eff_platforms)}."
+        )
 
     # 7. Entitlement version range (per-app, complements the license-level version policy)
     if matched is not None:
         if app_version is not None:
             parsed = _parse_version(app_version)
-            if matched.min_version is not None:
-                if parsed < _parse_version(matched.min_version):
-                    raise LicenseVersionError(
-                        f"App version {app_version} is below the minimum "
-                        f"required version {matched.min_version}."
-                    )
-            if matched.max_version is not None:
-                if parsed > _parse_version(matched.max_version):
-                    raise LicenseVersionError(
-                        f"App version {app_version} exceeds the maximum "
-                        f"covered version {matched.max_version}."
-                    )
+            if matched.min_version is not None and parsed < _parse_version(matched.min_version):
+                raise LicenseVersionError(
+                    f"App version {app_version} is below the minimum "
+                    f"required version {matched.min_version}."
+                )
+            if matched.max_version is not None and parsed > _parse_version(matched.max_version):
+                raise LicenseVersionError(
+                    f"App version {app_version} exceeds the maximum "
+                    f"covered version {matched.max_version}."
+                )
         elif matched.min_version is not None or matched.max_version is not None:
             raise LicenseVersionError(
                 "app_version is required to validate a version-restricted entitlement."

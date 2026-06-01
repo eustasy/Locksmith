@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import click
@@ -228,7 +228,7 @@ def main(
     pubkey_path = settings.pubkey_path
     signer = FileSigner.from_files(pubkey_path=pubkey_path, privkey_path=privkey_path)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     time_policy = TimePolicy.LIMITED if expires_days > 0 else TimePolicy.PERPETUAL
 
     lic = License(

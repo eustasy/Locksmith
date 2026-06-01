@@ -79,7 +79,7 @@ async def activate(body: ActivateRequest, request: Request) -> ActivateResponse:
                 platform=body.platform,
             )
         except LicenseError as exc:
-            raise HTTPException(status_code=403, detail=str(exc))
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
 
         # Determine identity and applicable limit based on restriction mode
         restriction = row.restriction

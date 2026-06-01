@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from io import BytesIO
 
 import pytest
@@ -15,11 +15,11 @@ from locksmith.core.signer import sign_license
 
 
 def _future_iso() -> str:
-    return (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
+    return (datetime.now(UTC) + timedelta(hours=1)).isoformat()
 
 
 def _past_iso() -> str:
-    return (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+    return (datetime.now(UTC) - timedelta(days=1)).isoformat()
 
 
 @pytest.fixture(scope="module")
@@ -121,10 +121,10 @@ async def test_validate_valid_license(client, file_signer):
     lic = License(
         license_id=str(uuid.uuid4()),
         email="offline@example.com",
-        issued_at=datetime.now(timezone.utc),
-        valid_from=datetime.now(timezone.utc),
+        issued_at=datetime.now(UTC),
+        valid_from=datetime.now(UTC),
         time_policy=TimePolicy.LIMITED,
-        expires_at=datetime.now(timezone.utc) + timedelta(days=365),
+        expires_at=datetime.now(UTC) + timedelta(days=365),
         version_policy=VersionPolicy.ANY,
     )
     await sign_license(lic, file_signer)

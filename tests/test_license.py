@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from locksmith.core.license import (
     Entitlement,
@@ -16,25 +16,25 @@ from locksmith.core.license import (
 
 
 def _make_license(**overrides) -> License:
-    defaults = dict(
-        license_id="test-id-001",
-        email="test@example.com",
-        issued_at=datetime.now(timezone.utc),
-        valid_from=datetime.now(timezone.utc),
-        time_policy=TimePolicy.PERPETUAL,
-        expires_at=None,
-        version_policy=VersionPolicy.ANY,
-        major_version=None,
-        locked_version=None,
-        editions=None,
-        platforms=None,
-        restriction=None,
-        activation_limit=None,
-        user_limit=None,
-        concurrent_limit=None,
-        entitlements=None,
-        signature="fakesig==",
-    )
+    defaults = {
+        "license_id": "test-id-001",
+        "email": "test@example.com",
+        "issued_at": datetime.now(UTC),
+        "valid_from": datetime.now(UTC),
+        "time_policy": TimePolicy.PERPETUAL,
+        "expires_at": None,
+        "version_policy": VersionPolicy.ANY,
+        "major_version": None,
+        "locked_version": None,
+        "editions": None,
+        "platforms": None,
+        "restriction": None,
+        "activation_limit": None,
+        "user_limit": None,
+        "concurrent_limit": None,
+        "entitlements": None,
+        "signature": "fakesig==",
+    }
     defaults.update(overrides)
     return License(**defaults)
 
@@ -79,7 +79,7 @@ def test_signable_payload_is_deterministic():
 
 
 def test_limited_roundtrip():
-    exp = datetime.now(timezone.utc) + timedelta(days=365)
+    exp = datetime.now(UTC) + timedelta(days=365)
     lic = _make_license(time_policy=TimePolicy.LIMITED, expires_at=exp)
     restored = License.from_json(lic.to_json())
     assert restored.time_policy == TimePolicy.LIMITED

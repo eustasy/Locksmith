@@ -25,10 +25,9 @@ specific application.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Optional
 
 
 class TimePolicy(str, Enum):
@@ -64,11 +63,11 @@ class Entitlement:
         self,
         *,
         app_id: str,
-        editions: Optional[list[str]] = None,
-        min_version: Optional[str] = None,
-        max_version: Optional[str] = None,
-        platforms: Optional[list[str]] = None,
-        seats: Optional[int] = None,
+        editions: list[str] | None = None,
+        min_version: str | None = None,
+        max_version: str | None = None,
+        platforms: list[str] | None = None,
+        seats: int | None = None,
     ) -> None:
         self.app_id = app_id
         self.editions = [e.lower() for e in editions] if editions is not None else None
@@ -113,22 +112,22 @@ class License:
         valid_from: datetime,
         # Time
         time_policy: TimePolicy | str = TimePolicy.PERPETUAL,
-        expires_at: Optional[datetime] = None,
+        expires_at: datetime | None = None,
         # Version
         version_policy: VersionPolicy | str = VersionPolicy.ANY,
-        major_version: Optional[int] = None,
-        locked_version: Optional[str] = None,
+        major_version: int | None = None,
+        locked_version: str | None = None,
         # Edition / Platform (top-level defaults; entitlement-level can override)
-        editions: Optional[list[str]] = None,
-        platforms: Optional[list[str]] = None,
+        editions: list[str] | None = None,
+        platforms: list[str] | None = None,
         # Restriction
-        restriction: Optional[RestrictionMode | str] = None,
-        activation_limit: Optional[int] = None,
-        user_limit: Optional[int] = None,
-        concurrent_limit: Optional[int] = None,
+        restriction: RestrictionMode | str | None = None,
+        activation_limit: int | None = None,
+        user_limit: int | None = None,
+        concurrent_limit: int | None = None,
         # Per-application entitlements
-        entitlements: Optional[list[Entitlement]] = None,
-        signature: Optional[str] = None,
+        entitlements: list[Entitlement] | None = None,
+        signature: str | None = None,
     ) -> None:
         self.license_id = license_id
         self.email = email
@@ -240,9 +239,9 @@ class LicenseRequest:
         self,
         *,
         email: str,
-        machine_id: Optional[str],
+        machine_id: str | None,
         app_version: str,
-        app_id: Optional[str] = None,
+        app_id: str | None = None,
         requested_at: datetime,
     ) -> None:
         self.email = email
@@ -287,14 +286,14 @@ class LicenseRequest:
     @staticmethod
     def new(
         email: str,
-        machine_id: Optional[str],
+        machine_id: str | None,
         app_version: str,
-        app_id: Optional[str] = None,
+        app_id: str | None = None,
     ) -> LicenseRequest:
         return LicenseRequest(
             email=email,
             machine_id=machine_id,
             app_id=app_id,
             app_version=app_version,
-            requested_at=datetime.now(timezone.utc),
+            requested_at=datetime.now(UTC),
         )

@@ -6,6 +6,7 @@ Supported platforms: Linux, Windows, macOS.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import os
 import subprocess
@@ -29,10 +30,9 @@ def _get_machine_id_linux() -> str:
             pass  # File not found or unreadable; try next path
 
     for path in ("/bin", "/etc", "/lib", "/root", "/sbin", "/usr", "/var"):
-        try:
+        # Directory inode unavailable; skip this source
+        with contextlib.suppress(OSError):
             sources.append(str(os.stat(path).st_ino))
-        except OSError:
-            pass  # Directory inode unavailable; skip this source
 
     return "".join(sources)
 
@@ -53,7 +53,7 @@ def _get_machine_id_windows() -> str:
 
     try:
         result = subprocess.run(
-            ["wmic", "csproduct", "get", "UUID"],
+            ["wmic", "csproduct", "get", "UUID"],  # noqa: S607 - resolve system tool via PATH
             capture_output=True,
             text=True,
             timeout=5,
@@ -70,7 +70,7 @@ def _get_machine_id_windows() -> str:
 def _get_machine_id_macos() -> str:
     try:
         result = subprocess.run(
-            ["ioreg", "-rd1", "-c", "IOPlatformExpertDevice"],
+            ["ioreg", "-rd1", "-c", "IOPlatformExpertDevice"],  # noqa: S607 - resolve system tool via PATH
             capture_output=True,
             text=True,
             timeout=5,

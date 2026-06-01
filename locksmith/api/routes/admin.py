@@ -7,7 +7,7 @@ header.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import PlainTextResponse
@@ -36,7 +36,7 @@ async def issue_license(body: IssueRequest, request: Request) -> PlainTextRespon
     lic = License(
         license_id=str(uuid.uuid4()),
         email=body.email,
-        issued_at=datetime.now(timezone.utc),
+        issued_at=datetime.now(UTC),
         valid_from=body.valid_from,
         time_policy=body.time_policy,
         expires_at=body.expires_at,

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -22,24 +22,24 @@ from locksmith.core.signer import (
 
 
 def _make_license(**overrides) -> License:
-    defaults = dict(
-        license_id="signer-test-001",
-        email="test@example.com",
-        issued_at=datetime.now(timezone.utc),
-        valid_from=datetime.now(timezone.utc),
-        time_policy=TimePolicy.PERPETUAL,
-        expires_at=None,
-        version_policy=VersionPolicy.ANY,
-        major_version=None,
-        locked_version=None,
-        editions=None,
-        platforms=None,
-        restriction=None,
-        activation_limit=None,
-        user_limit=None,
-        concurrent_limit=None,
-        entitlements=None,
-    )
+    defaults = {
+        "license_id": "signer-test-001",
+        "email": "test@example.com",
+        "issued_at": datetime.now(UTC),
+        "valid_from": datetime.now(UTC),
+        "time_policy": TimePolicy.PERPETUAL,
+        "expires_at": None,
+        "version_policy": VersionPolicy.ANY,
+        "major_version": None,
+        "locked_version": None,
+        "editions": None,
+        "platforms": None,
+        "restriction": None,
+        "activation_limit": None,
+        "user_limit": None,
+        "concurrent_limit": None,
+        "entitlements": None,
+    }
     defaults.update(overrides)
     return License(**defaults)
 
@@ -104,7 +104,7 @@ async def test_tampered_entitlement_raises(file_signer):
 async def test_expired_license_raises(file_signer):
     lic = _make_license(
         time_policy=TimePolicy.LIMITED,
-        expires_at=datetime.now(timezone.utc) - timedelta(seconds=1),
+        expires_at=datetime.now(UTC) - timedelta(seconds=1),
     )
     await sign_license(lic, file_signer)
     with pytest.raises(LicenseExpiredError):
@@ -113,7 +113,7 @@ async def test_expired_license_raises(file_signer):
 
 @pytest.mark.asyncio
 async def test_not_yet_valid_raises(file_signer):
-    lic = _make_license(valid_from=datetime.now(timezone.utc) + timedelta(days=1))
+    lic = _make_license(valid_from=datetime.now(UTC) + timedelta(days=1))
     await sign_license(lic, file_signer)
     with pytest.raises(LicenseNotYetValidError):
         await validate_license(lic, file_signer)
