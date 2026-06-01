@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -19,6 +20,133 @@ from locksmith.core.license import (
     TimePolicy,
 )
 from locksmith.core.signer import sign_license
+
+
+@dataclass(frozen=True)
+class IssueOptions:
+    """All ``locksmith-issue`` CLI options, bundled so the command callback delegates
+    instead of carrying 21 parameters. Field names match the Click option names
+    exactly (``--expires-days`` → ``expires_days``), so ``IssueOptions(**params)``
+    constructs cleanly from the callback's keyword arguments.
+    """
+
+    email: str | None
+    expires_days: int
+    version_policy: str
+    major_version: int | None
+    locked_version: str | None
+    editions: str | None
+    platforms: str | None
+    restriction: str | None
+    activation_limit: int | None
+    user_limit: int | None
+    concurrent_limit: int | None
+    app_id: str | None
+    entitlement_editions: str | None
+    entitlement_min_version: str | None
+    entitlement_max_version: str | None
+    entitlement_platforms: str | None
+    entitlement_seats: int | None
+    entitlements_file: str | None
+    request_file: str | None
+    privkey: str | None
+    out: str | None
+
+
+def _split_csv(value: str | None) -> list[str] | None:
+    """Split a comma-separated option into a list of trimmed values, or ``None`` if unset."""
+    return [item.strip() for item in value.split(",")] if value else None
+
+
+def _resolve_from_request(opts: IssueOptions) -> tuple[str | None, str | None]:
+    """Resolve the effective (email, app_id), importing them from a .lsreq file when given."""
+    email, app_id = opts.email, opts.app_id
+    if opts.request_file:
+        req = LicenseRequest.from_file(opts.request_file)
+        email = email or req.email
+        if not app_id:
+            app_id = req.app_id
+    return email, app_id
+
+
+def _build_entitlements(opts: IssueOptions, app_id: str | None) -> list[Entitlement]:
+    """Build the entitlement list from a bundle file, a single ``--app-id``, or neither."""
+    if opts.entitlements_file:
+        raw = json.loads(Path(opts.entitlements_file).read_text(encoding="utf-8"))
+        if not isinstance(raw, list):
+            raise click.UsageError("--entitlements-file must contain a JSON array.")
+        return [Entitlement.from_dict(e) for e in raw]
+    if app_id:
+        return [
+            Entitlement(
+                app_id=app_id,
+                editions=_split_csv(opts.entitlement_editions),
+                min_version=opts.entitlement_min_version,
+                max_version=opts.entitlement_max_version,
+                platforms=_split_csv(opts.entitlement_platforms),
+                seats=opts.entitlement_seats,
+            )
+        ]
+    return []
+
+
+def _build_license(opts: IssueOptions, email: str, entitlements: list[Entitlement]) -> License:
+    """Assemble the (still-unsigned) ``License`` from resolved options."""
+    now = datetime.now(UTC)
+    time_policy = TimePolicy.LIMITED if opts.expires_days > 0 else TimePolicy.PERPETUAL
+    return License(
+        license_id=str(uuid.uuid4()),
+        email=email,
+        issued_at=now,
+        valid_from=now,
+        time_policy=time_policy,
+        expires_at=(now + timedelta(days=opts.expires_days)) if opts.expires_days > 0 else None,
+        version_policy=opts.version_policy,
+        major_version=opts.major_version,
+        locked_version=opts.locked_version,
+        editions=_split_csv(opts.editions),
+        platforms=_split_csv(opts.platforms),
+        restriction=opts.restriction,
+        activation_limit=opts.activation_limit,
+        user_limit=opts.user_limit,
+        concurrent_limit=opts.concurrent_limit,
+        entitlements=entitlements,
+    )
+
+
+def _print_summary(lic: License) -> None:
+    """Echo the human-readable summary of a freshly issued license."""
+    click.echo(f"  ID              : {lic.license_id}")
+    click.echo(f"  Email           : {lic.email}")
+    click.echo(f"  Time            : {lic.time_policy.value}" + (f" (expires {lic.expires_at.date()})" if lic.expires_at else ""))
+    click.echo(
+        f"  Version         : {lic.version_policy.value}"
+        + (f" (major {lic.major_version})" if lic.major_version is not None else "")
+        + (f" (locked {lic.locked_version})" if lic.locked_version else "")
+    )
+    click.echo(f"  Editions        : {', '.join(lic.editions) if lic.editions else 'any'}")
+    click.echo(f"  Platforms       : {', '.join(lic.platforms) if lic.platforms else 'any'}")
+    if lic.restriction:
+        mode = lic.restriction.value
+        limit_val = lic.activation_limit or lic.user_limit or lic.concurrent_limit
+        click.echo(f"  Restriction     : {mode} (limit: {limit_val})")
+    else:
+        click.echo("  Restriction     : none")
+    if lic.entitlements:
+        click.echo(f"  Entitlements    : {len(lic.entitlements)} app(s)")
+        for ent in lic.entitlements:
+            parts = [f"    [{ent.app_id}]"]
+            if ent.editions:
+                parts.append(f"editions={','.join(ent.editions)}")
+            if ent.min_version or ent.max_version:
+                parts.append(f"versions={ent.min_version or '*'}..{ent.max_version or '*'}")
+            if ent.platforms:
+                parts.append(f"platforms={','.join(ent.platforms)}")
+            if ent.seats:
+                parts.append(f"seats={ent.seats}")
+            click.echo("  " + " ".join(parts))
+    else:
+        click.echo("  Entitlements    : none (applies to all applications)")
 
 
 @click.command("locksmith-issue")
@@ -137,29 +265,7 @@ from locksmith.core.signer import sign_license
     help="Path to privkey.pem. Defaults to LOCKSMITH_PRIVKEY_PATH.",
 )
 @click.option("--out", default=None, help="Output .lic file path.")
-def main(
-    email: str | None,
-    expires_days: int,
-    version_policy: str,
-    major_version: int | None,
-    locked_version: str | None,
-    editions: str | None,
-    platforms: str | None,
-    restriction: str | None,
-    activation_limit: int | None,
-    user_limit: int | None,
-    concurrent_limit: int | None,
-    app_id: str | None,
-    entitlement_editions: str | None,
-    entitlement_min_version: str | None,
-    entitlement_max_version: str | None,
-    entitlement_platforms: str | None,
-    entitlement_seats: int | None,
-    entitlements_file: str | None,
-    request_file: str | None,
-    privkey: str | None,
-    out: str | None,
-) -> None:
+def main(**params: object) -> None:
     """Issue a signed license file (.lic).
 
     \b
@@ -185,96 +291,23 @@ def main(
     # Bundle — multiple applications from a JSON file:
       locksmith-issue --email user@co.com --entitlements-file bundle.json
     """
-    if request_file:
-        req = LicenseRequest.from_file(request_file)
-        email = email or req.email
-        if not app_id:
-            app_id = req.app_id
+    opts = IssueOptions(**params)  # Click supplies exactly one keyword arg per option
 
+    email, app_id = _resolve_from_request(opts)
     if not email:
         raise click.UsageError("--email is required (or provide --request-file).")
 
-    # Build entitlements list
-    entitlements: list[Entitlement] = []
+    entitlements = _build_entitlements(opts, app_id)
 
-    if entitlements_file:
-        raw = json.loads(Path(entitlements_file).read_text(encoding="utf-8"))
-        if not isinstance(raw, list):
-            raise click.UsageError("--entitlements-file must contain a JSON array.")
-        entitlements = [Entitlement.from_dict(e) for e in raw]
-    elif app_id:
-        entitlements = [
-            Entitlement(
-                app_id=app_id,
-                editions=[e.strip() for e in entitlement_editions.split(",")] if entitlement_editions else None,
-                min_version=entitlement_min_version,
-                max_version=entitlement_max_version,
-                platforms=[p.strip() for p in entitlement_platforms.split(",")] if entitlement_platforms else None,
-                seats=entitlement_seats,
-            )
-        ]
+    privkey_path = Path(opts.privkey) if opts.privkey else settings.privkey_path
+    signer = FileSigner.from_files(pubkey_path=settings.pubkey_path, privkey_path=privkey_path)
 
-    privkey_path = Path(privkey) if privkey else settings.privkey_path
-    pubkey_path = settings.pubkey_path
-    signer = FileSigner.from_files(pubkey_path=pubkey_path, privkey_path=privkey_path)
-
-    now = datetime.now(UTC)
-    time_policy = TimePolicy.LIMITED if expires_days > 0 else TimePolicy.PERPETUAL
-
-    lic = License(
-        license_id=str(uuid.uuid4()),
-        email=email,
-        issued_at=now,
-        valid_from=now,
-        time_policy=time_policy,
-        expires_at=(now + timedelta(days=expires_days)) if expires_days > 0 else None,
-        version_policy=version_policy,
-        major_version=major_version,
-        locked_version=locked_version,
-        editions=[e.strip() for e in editions.split(",")] if editions else None,
-        platforms=[p.strip() for p in platforms.split(",")] if platforms else None,
-        restriction=restriction,
-        activation_limit=activation_limit,
-        user_limit=user_limit,
-        concurrent_limit=concurrent_limit,
-        entitlements=entitlements,
-    )
-
+    lic = _build_license(opts, email, entitlements)
     asyncio.run(sign_license(lic, signer))
 
     safe_email = email.replace("@", "_").replace(".", "_")
-    out_path = out or f"{safe_email}_{lic.license_id[:8]}.lic"
+    out_path = opts.out or f"{safe_email}_{lic.license_id[:8]}.lic"
     lic.to_file(out_path)
 
     click.secho(f"License written to: {out_path}", fg="green")
-    click.echo(f"  ID              : {lic.license_id}")
-    click.echo(f"  Email           : {lic.email}")
-    click.echo(f"  Time            : {lic.time_policy.value}" + (f" (expires {lic.expires_at.date()})" if lic.expires_at else ""))
-    click.echo(
-        f"  Version         : {lic.version_policy.value}"
-        + (f" (major {lic.major_version})" if lic.major_version is not None else "")
-        + (f" (locked {lic.locked_version})" if lic.locked_version else "")
-    )
-    click.echo(f"  Editions        : {', '.join(lic.editions) if lic.editions else 'any'}")
-    click.echo(f"  Platforms       : {', '.join(lic.platforms) if lic.platforms else 'any'}")
-    if lic.restriction:
-        mode = lic.restriction.value
-        limit_val = lic.activation_limit or lic.user_limit or lic.concurrent_limit
-        click.echo(f"  Restriction     : {mode} (limit: {limit_val})")
-    else:
-        click.echo("  Restriction     : none")
-    if lic.entitlements:
-        click.echo(f"  Entitlements    : {len(lic.entitlements)} app(s)")
-        for ent in lic.entitlements:
-            parts = [f"    [{ent.app_id}]"]
-            if ent.editions:
-                parts.append(f"editions={','.join(ent.editions)}")
-            if ent.min_version or ent.max_version:
-                parts.append(f"versions={ent.min_version or '*'}..{ent.max_version or '*'}")
-            if ent.platforms:
-                parts.append(f"platforms={','.join(ent.platforms)}")
-            if ent.seats:
-                parts.append(f"seats={ent.seats}")
-            click.echo("  " + " ".join(parts))
-    else:
-        click.echo("  Entitlements    : none (applies to all applications)")
+    _print_summary(lic)

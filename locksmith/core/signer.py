@@ -112,6 +112,89 @@ async def verify_license_signature(license: License, signer: BaseSigner) -> None
 
 
 # ---------------------------------------------------------------------------
+# Validation steps
+#
+# Each helper performs one numbered step from the module docstring and raises a
+# ``LicenseError`` subclass on failure. ``validate_license`` below sequences them.
+# ---------------------------------------------------------------------------
+
+
+def _check_temporal(license: License, now: datetime) -> None:
+    """Step 2: ``valid_from`` / ``expires_at`` window (naive datetimes treated as UTC)."""
+    valid_from = license.valid_from
+    if valid_from.tzinfo is None:
+        valid_from = valid_from.replace(tzinfo=UTC)
+    if now < valid_from:
+        raise LicenseNotYetValidError(f"License is not valid until {license.valid_from.isoformat()}.")
+
+    if license.expires_at is not None:
+        expires_at = license.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=UTC)
+        if now > expires_at:
+            raise LicenseExpiredError(f"License expired on {license.expires_at.isoformat()}.")
+
+
+def _check_version_policy(license: License, app_version: str | None) -> None:
+    """Step 3: license-level version policy (maintenance / specific)."""
+    if license.version_policy == VersionPolicy.MAINTENANCE:
+        if app_version is None:
+            raise LicenseVersionError("app_version is required for maintenance license validation.")
+        app_major = _parse_version(app_version)[0]
+        if license.major_version != app_major:
+            raise LicenseVersionError(
+                f"License covers major version {license.major_version}, but the application is version {app_version}."
+            )
+    elif license.version_policy == VersionPolicy.SPECIFIC:
+        if app_version is None:
+            raise LicenseVersionError("app_version is required for specific-version license validation.")
+        if license.locked_version != app_version:
+            raise LicenseVersionError(
+                f"License is locked to version {license.locked_version}, but the application is version {app_version}."
+            )
+
+
+def _match_entitlement(license: License, app_id: str | None) -> Entitlement | None:
+    """Step 4: find the entitlement for ``app_id``; ``None`` if the license is app-unrestricted."""
+    if not license.entitlements:
+        return None
+    if app_id is None:
+        raise LicenseAppError("This license restricts access by application. Provide app_id to validate.")
+    for ent in license.entitlements:
+        if ent.app_id == app_id:
+            return ent
+    raise LicenseAppError(f"This license does not cover application '{app_id}'.")
+
+
+def _check_edition(matched: Entitlement | None, license: License, edition: str | None) -> None:
+    """Step 5: effective edition check — entitlement editions override license-level; None = no restriction."""
+    eff_editions = matched.editions if (matched is not None and matched.editions is not None) else license.editions
+    if eff_editions is not None and (edition is None or edition.lower() not in eff_editions):
+        raise LicenseEditionError(f"Edition '{edition}' is not permitted. Allowed editions: {', '.join(eff_editions)}.")
+
+
+def _check_platform(matched: Entitlement | None, license: License, platform: str | None) -> None:
+    """Step 6: effective platform check — same fallback logic as editions."""
+    eff_platforms = matched.platforms if (matched is not None and matched.platforms is not None) else license.platforms
+    if eff_platforms is not None and (platform is None or platform.lower() not in eff_platforms):
+        raise LicenseOSError(f"Platform '{platform}' is not permitted. Allowed platforms: {', '.join(eff_platforms)}.")
+
+
+def _check_entitlement_version_range(matched: Entitlement | None, app_version: str | None) -> None:
+    """Step 7: per-app version range, independent of the license-level version policy."""
+    if matched is None:
+        return
+    if app_version is not None:
+        parsed = _parse_version(app_version)
+        if matched.min_version is not None and parsed < _parse_version(matched.min_version):
+            raise LicenseVersionError(f"App version {app_version} is below the minimum required version {matched.min_version}.")
+        if matched.max_version is not None and parsed > _parse_version(matched.max_version):
+            raise LicenseVersionError(f"App version {app_version} exceeds the maximum covered version {matched.max_version}.")
+    elif matched.min_version is not None or matched.max_version is not None:
+        raise LicenseVersionError("app_version is required to validate a version-restricted entitlement.")
+
+
+# ---------------------------------------------------------------------------
 # Full validation pipeline
 # ---------------------------------------------------------------------------
 
@@ -129,80 +212,18 @@ async def validate_license(
 ) -> Entitlement | None:
     """Validate a license end-to-end. Raises a ``LicenseError`` subclass on failure.
 
-    Returns the matched ``Entitlement`` if the license has entitlements and one
-    was found, or ``None`` if the license is app-unrestricted.
+    Each numbered step is delegated to a ``_check_*`` / ``_match_*`` helper; see the
+    module docstring for the full ordering. Returns the matched ``Entitlement`` if the
+    license has entitlements and one was found, or ``None`` if it is app-unrestricted.
+
+    ``machine_id`` and ``user_principal`` are accepted for API symmetry with the
+    activation layer but are not checked cryptographically here.
     """
-    # 1. Signature — must always be first
-    await verify_license_signature(license, signer)
-
-    now = datetime.now(UTC)
-
-    # 2. Temporal validity
-    valid_from = license.valid_from
-    if valid_from.tzinfo is None:
-        valid_from = valid_from.replace(tzinfo=UTC)
-    if now < valid_from:
-        raise LicenseNotYetValidError(f"License is not valid until {license.valid_from.isoformat()}.")
-
-    if license.expires_at is not None:
-        expires_at = license.expires_at
-        if expires_at.tzinfo is None:
-            expires_at = expires_at.replace(tzinfo=UTC)
-        if now > expires_at:
-            raise LicenseExpiredError(f"License expired on {license.expires_at.isoformat()}.")
-
-    # 3. Version policy
-    if license.version_policy == VersionPolicy.MAINTENANCE:
-        if app_version is None:
-            raise LicenseVersionError("app_version is required for maintenance license validation.")
-        app_major = _parse_version(app_version)[0]
-        if license.major_version != app_major:
-            raise LicenseVersionError(
-                f"License covers major version {license.major_version}, but the application is version {app_version}."
-            )
-    elif license.version_policy == VersionPolicy.SPECIFIC:
-        if app_version is None:
-            raise LicenseVersionError("app_version is required for specific-version license validation.")
-        if license.locked_version != app_version:
-            raise LicenseVersionError(
-                f"License is locked to version {license.locked_version}, but the application is version {app_version}."
-            )
-
-    # 4. Entitlement matching
-    matched: Entitlement | None = None
-
-    if license.entitlements:
-        if app_id is None:
-            raise LicenseAppError("This license restricts access by application. Provide app_id to validate.")
-
-        for ent in license.entitlements:
-            if ent.app_id == app_id:
-                matched = ent
-                break
-
-        if matched is None:
-            raise LicenseAppError(f"This license does not cover application '{app_id}'.")
-
-    # 5. Effective edition check
-    # Entitlement editions override license-level; None on either = no restriction.
-    eff_editions = matched.editions if (matched is not None and matched.editions is not None) else license.editions
-    if eff_editions is not None and (edition is None or edition.lower() not in eff_editions):
-        raise LicenseEditionError(f"Edition '{edition}' is not permitted. Allowed editions: {', '.join(eff_editions)}.")
-
-    # 6. Effective platform check (same fallback logic)
-    eff_platforms = matched.platforms if (matched is not None and matched.platforms is not None) else license.platforms
-    if eff_platforms is not None and (platform is None or platform.lower() not in eff_platforms):
-        raise LicenseOSError(f"Platform '{platform}' is not permitted. Allowed platforms: {', '.join(eff_platforms)}.")
-
-    # 7. Entitlement version range (per-app, complements the license-level version policy)
-    if matched is not None:
-        if app_version is not None:
-            parsed = _parse_version(app_version)
-            if matched.min_version is not None and parsed < _parse_version(matched.min_version):
-                raise LicenseVersionError(f"App version {app_version} is below the minimum required version {matched.min_version}.")
-            if matched.max_version is not None and parsed > _parse_version(matched.max_version):
-                raise LicenseVersionError(f"App version {app_version} exceeds the maximum covered version {matched.max_version}.")
-        elif matched.min_version is not None or matched.max_version is not None:
-            raise LicenseVersionError("app_version is required to validate a version-restricted entitlement.")
-
+    await verify_license_signature(license, signer)  # 1. Signature — always first
+    _check_temporal(license, datetime.now(UTC))  # 2. Temporal validity
+    _check_version_policy(license, app_version)  # 3. Version policy
+    matched = _match_entitlement(license, app_id)  # 4. Entitlement matching
+    _check_edition(matched, license, edition)  # 5. Effective edition
+    _check_platform(matched, license, platform)  # 6. Effective platform
+    _check_entitlement_version_range(matched, app_version)  # 7. Entitlement version range
     return matched
