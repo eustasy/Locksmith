@@ -53,12 +53,8 @@ def main(license_file: str, pubkey: str | None, app_version: str | None) -> None
         click.echo(f"  Email           : {lic.email}")
         click.echo(f"  Time            : {lic.time_policy.value}")
         click.echo(f"  Version         : {lic.version_policy.value}")
-        click.echo(
-            f"  Restriction     : {lic.restriction.value if lic.restriction else 'none'}"
-        )
-        click.echo(
-            f"  Expires         : {lic.expires_at.isoformat() if lic.expires_at else 'never'}"
-        )
+        click.echo(f"  Restriction     : {lic.restriction.value if lic.restriction else 'none'}")
+        click.echo(f"  Expires         : {lic.expires_at.isoformat() if lic.expires_at else 'never'}")
     except LicenseError as exc:
         click.secho(f"License is INVALID: {exc}", fg="red")
         sys.exit(1)

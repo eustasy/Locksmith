@@ -89,10 +89,7 @@ from locksmith.core.signer import sign_license
 @click.option(
     "--app-id",
     default=None,
-    help=(
-        "App ID for a single-app entitlement (e.g. 'com.example.myapp'). "
-        "For bundles use --entitlements-file."
-    ),
+    help=("App ID for a single-app entitlement (e.g. 'com.example.myapp'). For bundles use --entitlements-file."),
 )
 @click.option(
     "--entitlement-editions",
@@ -124,10 +121,7 @@ from locksmith.core.signer import sign_license
     "--entitlements-file",
     default=None,
     type=click.Path(exists=True),
-    help=(
-        "JSON file containing a list of entitlement objects. "
-        "Overrides all single-entitlement options."
-    ),
+    help=("JSON file containing a list of entitlement objects. Overrides all single-entitlement options."),
 )
 # ---- Common ----
 @click.option(
@@ -212,14 +206,10 @@ def main(
         entitlements = [
             Entitlement(
                 app_id=app_id,
-                editions=[e.strip() for e in entitlement_editions.split(",")]
-                if entitlement_editions
-                else None,
+                editions=[e.strip() for e in entitlement_editions.split(",")] if entitlement_editions else None,
                 min_version=entitlement_min_version,
                 max_version=entitlement_max_version,
-                platforms=[p.strip() for p in entitlement_platforms.split(",")]
-                if entitlement_platforms
-                else None,
+                platforms=[p.strip() for p in entitlement_platforms.split(",")] if entitlement_platforms else None,
                 seats=entitlement_seats,
             )
         ]
@@ -259,21 +249,14 @@ def main(
     click.secho(f"License written to: {out_path}", fg="green")
     click.echo(f"  ID              : {lic.license_id}")
     click.echo(f"  Email           : {lic.email}")
-    click.echo(
-        f"  Time            : {lic.time_policy.value}"
-        + (f" (expires {lic.expires_at.date()})" if lic.expires_at else "")
-    )
+    click.echo(f"  Time            : {lic.time_policy.value}" + (f" (expires {lic.expires_at.date()})" if lic.expires_at else ""))
     click.echo(
         f"  Version         : {lic.version_policy.value}"
         + (f" (major {lic.major_version})" if lic.major_version is not None else "")
         + (f" (locked {lic.locked_version})" if lic.locked_version else "")
     )
-    click.echo(
-        f"  Editions        : {', '.join(lic.editions) if lic.editions else 'any'}"
-    )
-    click.echo(
-        f"  Platforms       : {', '.join(lic.platforms) if lic.platforms else 'any'}"
-    )
+    click.echo(f"  Editions        : {', '.join(lic.editions) if lic.editions else 'any'}")
+    click.echo(f"  Platforms       : {', '.join(lic.platforms) if lic.platforms else 'any'}")
     if lic.restriction:
         mode = lic.restriction.value
         limit_val = lic.activation_limit or lic.user_limit or lic.concurrent_limit
@@ -287,9 +270,7 @@ def main(
             if ent.editions:
                 parts.append(f"editions={','.join(ent.editions)}")
             if ent.min_version or ent.max_version:
-                parts.append(
-                    f"versions={ent.min_version or '*'}..{ent.max_version or '*'}"
-                )
+                parts.append(f"versions={ent.min_version or '*'}..{ent.max_version or '*'}")
             if ent.platforms:
                 parts.append(f"platforms={','.join(ent.platforms)}")
             if ent.seats:

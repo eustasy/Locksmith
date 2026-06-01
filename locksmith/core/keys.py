@@ -57,20 +57,14 @@ class FileSigner(BaseSigner):
 
     async def sign(self, data: bytes) -> bytes:
         if self._privkey is None:
-            raise ValueError(
-                "This FileSigner instance has no private key (verify-only mode)."
-            )
+            raise ValueError("This FileSigner instance has no private key (verify-only mode).")
         loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(
-            None, lambda: rsa.sign(data, self._privkey, "SHA-512")
-        )
+        return await loop.run_in_executor(None, lambda: rsa.sign(data, self._privkey, "SHA-512"))
 
     async def verify(self, data: bytes, signature: bytes) -> bool:
         loop = asyncio.get_running_loop()
         try:
-            await loop.run_in_executor(
-                None, lambda: rsa.verify(data, signature, self._pubkey)
-            )
+            await loop.run_in_executor(None, lambda: rsa.verify(data, signature, self._pubkey))
             return True
         except rsa.VerificationError:
             return False

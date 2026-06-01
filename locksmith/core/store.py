@@ -43,22 +43,14 @@ class DBLicense(Base):
     license_id: Mapped[str] = mapped_column(String(36), primary_key=True)
     email: Mapped[str] = mapped_column(String(255), nullable=False)
     issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    valid_from: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    valid_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     # Time
-    time_policy: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="perpetual"
-    )
-    expires_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    time_policy: Mapped[str] = mapped_column(String(20), nullable=False, default="perpetual")
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Version
-    version_policy: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="any"
-    )
+    version_policy: Mapped[str] = mapped_column(String(20), nullable=False, default="any")
     major_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
     locked_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
@@ -78,9 +70,7 @@ class DBLicense(Base):
     signature: Mapped[str] = mapped_column(String(2048), nullable=False)
     revoked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
-    activations: Mapped[list[DBActivation]] = relationship(
-        back_populates="license", cascade="all, delete-orphan", lazy="noload"
-    )
+    activations: Mapped[list[DBActivation]] = relationship(back_populates="license", cascade="all, delete-orphan", lazy="noload")
 
 
 class DBActivation(Base):
@@ -104,16 +94,10 @@ class DBActivation(Base):
     )
     app_id: Mapped[str] = mapped_column(String(255), nullable=False, default="*")
     identity: Mapped[str] = mapped_column(String(255), nullable=False)
-    activated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-    revoked_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    activated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    license: Mapped[DBLicense] = relationship(
-        back_populates="activations", lazy="noload"
-    )
+    license: Mapped[DBLicense] = relationship(back_populates="activations", lazy="noload")
 
 
 class DBLicenseRequest(Base):
@@ -124,9 +108,7 @@ class DBLicenseRequest(Base):
     machine_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     app_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     app_version: Mapped[str] = mapped_column(String(32), nullable=False)
-    requested_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     fulfilled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
@@ -189,9 +171,7 @@ async def save_license(session: AsyncSession, lic: License) -> DBLicense:
 
 
 async def get_license(session: AsyncSession, license_id: str) -> DBLicense | None:
-    result = await session.execute(
-        select(DBLicense).where(DBLicense.license_id == license_id)
-    )
+    result = await session.execute(select(DBLicense).where(DBLicense.license_id == license_id))
     return result.scalar_one_or_none()
 
 
@@ -204,9 +184,7 @@ async def revoke_license(session: AsyncSession, license_id: str) -> bool:
     return True
 
 
-async def count_active_activations(
-    session: AsyncSession, license_id: str, app_id: str = "*"
-) -> int:
+async def count_active_activations(session: AsyncSession, license_id: str, app_id: str = "*") -> int:
     result = await session.execute(
         select(func.count()).where(
             DBActivation.license_id == license_id,
@@ -217,9 +195,7 @@ async def count_active_activations(
     return result.scalar_one()
 
 
-async def record_activation(
-    session: AsyncSession, license_id: str, app_id: str, identity: str
-) -> DBActivation:
+async def record_activation(session: AsyncSession, license_id: str, app_id: str, identity: str) -> DBActivation:
     """Record or reactivate an identity. Caller is responsible for limit checks."""
     result = await session.execute(
         select(DBActivation).where(
@@ -247,9 +223,7 @@ async def record_activation(
     return row
 
 
-async def revoke_activation(
-    session: AsyncSession, license_id: str, app_id: str, identity: str
-) -> bool:
+async def revoke_activation(session: AsyncSession, license_id: str, app_id: str, identity: str) -> bool:
     """Revoke a single activation (e.g. floating check-in). Returns False if not found."""
     result = await session.execute(
         select(DBActivation).where(

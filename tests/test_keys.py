@@ -58,9 +58,7 @@ def test_save_keypair_raises_when_target_path_is_not_a_directory(keypair, tmp_pa
     os.name == "posix",
     reason="On non-POSIX, verify save_keypair succeeds and keys roundtrip without asserting POSIX mode bits",
 )
-def test_save_keypair_succeeds_without_permission_bit_assertions_on_non_posix(
-    keypair, tmp_path
-):
+def test_save_keypair_succeeds_without_permission_bit_assertions_on_non_posix(keypair, tmp_path):
     pubkey, privkey = keypair
     priv_path, pub_path = save_keypair(pubkey, privkey, tmp_path)
 

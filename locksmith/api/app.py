@@ -23,9 +23,7 @@ async def _default_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await create_tables()
     app.state.signer = FileSigner.from_files(
         pubkey_path=settings.pubkey_path,
-        privkey_path=(
-            settings.privkey_path if settings.privkey_path.exists() else None
-        ),
+        privkey_path=(settings.privkey_path if settings.privkey_path.exists() else None),
     )
     yield
 

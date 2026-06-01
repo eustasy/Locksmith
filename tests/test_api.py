@@ -24,9 +24,7 @@ def _past_iso() -> str:
 
 @pytest.fixture(scope="module")
 async def client(test_app):
-    async with AsyncClient(
-        transport=ASGITransport(app=test_app), base_url="http://test"
-    ) as c:
+    async with AsyncClient(transport=ASGITransport(app=test_app), base_url="http://test") as c:
         yield c
 
 

@@ -33,9 +33,7 @@ def main(email: str, app_id: str | None, app_version: str, out: str | None) -> N
         machine_id = compute_machine_id()
         click.echo(f"Machine ID: {machine_id}")
     except RuntimeError as exc:
-        click.secho(
-            f"Warning: could not compute machine ID: {exc}", fg="yellow", err=True
-        )
+        click.secho(f"Warning: could not compute machine ID: {exc}", fg="yellow", err=True)
 
     req = LicenseRequest.new(
         email=email,

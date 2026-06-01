@@ -90,11 +90,7 @@ async def activate(body: ActivateRequest, request: Request) -> ActivateResponse:
                     detail="user_principal is required for user-restricted licenses.",
                 )
             identity = body.user_principal
-            limit = (
-                matched.seats
-                if (matched is not None and matched.seats is not None)
-                else row.user_limit
-            )
+            limit = matched.seats if (matched is not None and matched.seats is not None) else row.user_limit
         else:
             if not body.machine_id:
                 raise HTTPException(
@@ -103,18 +99,10 @@ async def activate(body: ActivateRequest, request: Request) -> ActivateResponse:
                 )
             identity = body.machine_id
             if restriction == RestrictionMode.FLOATING.value:
-                limit = (
-                    matched.seats
-                    if (matched is not None and matched.seats is not None)
-                    else row.concurrent_limit
-                )
+                limit = matched.seats if (matched is not None and matched.seats is not None) else row.concurrent_limit
             else:
                 # "activations" or None (unrestricted licenses still count seats if limit set)
-                limit = (
-                    matched.seats
-                    if (matched is not None and matched.seats is not None)
-                    else row.activation_limit
-                )
+                limit = matched.seats if (matched is not None and matched.seats is not None) else row.activation_limit
 
         activation_app_id = matched.app_id if matched is not None else "*"
 
@@ -130,9 +118,7 @@ async def activate(body: ActivateRequest, request: Request) -> ActivateResponse:
         is_new = result.scalar_one_or_none() is None
 
         if is_new and limit is not None:
-            active_count = await count_active_activations(
-                session, body.license_id, activation_app_id
-            )
+            active_count = await count_active_activations(session, body.license_id, activation_app_id)
             if active_count >= limit:
                 raise HTTPException(
                     status_code=403,
@@ -140,9 +126,7 @@ async def activate(body: ActivateRequest, request: Request) -> ActivateResponse:
                 )
 
         await record_activation(session, body.license_id, activation_app_id, identity)
-        final_count = await count_active_activations(
-            session, body.license_id, activation_app_id
-        )
+        final_count = await count_active_activations(session, body.license_id, activation_app_id)
 
     return ActivateResponse(
         status="activated",
@@ -165,9 +149,7 @@ async def deactivate(body: DeactivateRequest, request: Request) -> None:
         restriction = row.restriction
         if restriction == RestrictionMode.USERS.value:
             if not body.user_principal:
-                raise HTTPException(
-                    status_code=422, detail="user_principal is required."
-                )
+                raise HTTPException(status_code=422, detail="user_principal is required.")
             identity = body.user_principal
         else:
             if not body.machine_id:

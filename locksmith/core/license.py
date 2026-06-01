@@ -73,9 +73,7 @@ class Entitlement:
         self.editions = [e.lower() for e in editions] if editions is not None else None
         self.min_version = min_version
         self.max_version = max_version
-        self.platforms = (
-            [p.lower() for p in platforms] if platforms is not None else None
-        )
+        self.platforms = [p.lower() for p in platforms] if platforms is not None else None
         self.seats = seats
 
     def to_dict(self) -> dict:
@@ -139,12 +137,8 @@ class License:
         self.major_version = major_version
         self.locked_version = locked_version
         self.editions = [e.lower() for e in editions] if editions is not None else None
-        self.platforms = (
-            [p.lower() for p in platforms] if platforms is not None else None
-        )
-        self.restriction = (
-            RestrictionMode(restriction) if restriction is not None else None
-        )
+        self.platforms = [p.lower() for p in platforms] if platforms is not None else None
+        self.restriction = RestrictionMode(restriction) if restriction is not None else None
         self.activation_limit = activation_limit
         self.user_limit = user_limit
         self.concurrent_limit = concurrent_limit

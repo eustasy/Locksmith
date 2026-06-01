@@ -90,9 +90,7 @@ async def test_tampered_entitlement_raises(file_signer):
     await sign_license(lic, file_signer)
     lic.entitlements[0].seats = 9999
     with pytest.raises(LicenseVerificationError):
-        await validate_license(
-            lic, file_signer, app_id="com.example.app", app_version="1.0.0"
-        )
+        await validate_license(lic, file_signer, app_id="com.example.app", app_version="1.0.0")
 
 
 # ---------------------------------------------------------------------------
@@ -334,9 +332,7 @@ async def test_bundle_second_app_matches(file_signer):
     ]
     lic = _make_license(entitlements=ents)
     await sign_license(lic, file_signer)
-    matched = await validate_license(
-        lic, file_signer, app_id="com.example.app2", platform="macos"
-    )
+    matched = await validate_license(lic, file_signer, app_id="com.example.app2", platform="macos")
     assert matched is not None
     assert matched.seats == 5
 
