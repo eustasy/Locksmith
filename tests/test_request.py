@@ -39,10 +39,14 @@ def test_writes_request_with_all_fields(runner, fake_machine_id, tmp_path):
     result = runner.invoke(
         request_cli.main,
         [
-            "--email", "user@co.com",
-            "--app-id", "com.example.app",
-            "--app-version", "2.1.0",
-            "--out", str(out),
+            "--email",
+            "user@co.com",
+            "--app-id",
+            "com.example.app",
+            "--app-version",
+            "2.1.0",
+            "--out",
+            str(out),
         ],
     )
     assert result.exit_code == 0, result.output
