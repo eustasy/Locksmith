@@ -114,37 +114,53 @@ def _build_license(opts: IssueOptions, email: str, entitlements: list[Entitlemen
     )
 
 
+def _format_version(lic: License) -> str:
+    """Render the license version policy plus any major/locked qualifiers."""
+    version = lic.version_policy.value
+    if lic.major_version is not None:
+        version += f" (major {lic.major_version})"
+    if lic.locked_version:
+        version += f" (locked {lic.locked_version})"
+    return version
+
+
+def _format_entitlement(ent: Entitlement) -> str:
+    """Render one entitlement as an indented single-line summary."""
+    parts = [f"    [{ent.app_id}]"]
+    if ent.editions:
+        parts.append(f"editions={','.join(ent.editions)}")
+    if ent.min_version or ent.max_version:
+        parts.append(f"versions={ent.min_version or '*'}..{ent.max_version or '*'}")
+    if ent.platforms:
+        parts.append(f"platforms={','.join(ent.platforms)}")
+    if ent.seats:
+        parts.append(f"seats={ent.seats}")
+    return "  " + " ".join(parts)
+
+
 def _print_summary(lic: License) -> None:
     """Echo the human-readable summary of a freshly issued license."""
+    expires = f" (expires {lic.expires_at.date()})" if lic.expires_at else ""
+    editions = ", ".join(lic.editions) if lic.editions else "any"
+    platforms = ", ".join(lic.platforms) if lic.platforms else "any"
+
     click.echo(f"  ID              : {lic.license_id}")
     click.echo(f"  Email           : {lic.email}")
-    click.echo(f"  Time            : {lic.time_policy.value}" + (f" (expires {lic.expires_at.date()})" if lic.expires_at else ""))
-    click.echo(
-        f"  Version         : {lic.version_policy.value}"
-        + (f" (major {lic.major_version})" if lic.major_version is not None else "")
-        + (f" (locked {lic.locked_version})" if lic.locked_version else "")
-    )
-    click.echo(f"  Editions        : {', '.join(lic.editions) if lic.editions else 'any'}")
-    click.echo(f"  Platforms       : {', '.join(lic.platforms) if lic.platforms else 'any'}")
+    click.echo(f"  Time            : {lic.time_policy.value}{expires}")
+    click.echo(f"  Version         : {_format_version(lic)}")
+    click.echo(f"  Editions        : {editions}")
+    click.echo(f"  Platforms       : {platforms}")
+
     if lic.restriction:
-        mode = lic.restriction.value
         limit_val = lic.activation_limit or lic.user_limit or lic.concurrent_limit
-        click.echo(f"  Restriction     : {mode} (limit: {limit_val})")
+        click.echo(f"  Restriction     : {lic.restriction.value} (limit: {limit_val})")
     else:
         click.echo("  Restriction     : none")
+
     if lic.entitlements:
         click.echo(f"  Entitlements    : {len(lic.entitlements)} app(s)")
         for ent in lic.entitlements:
-            parts = [f"    [{ent.app_id}]"]
-            if ent.editions:
-                parts.append(f"editions={','.join(ent.editions)}")
-            if ent.min_version or ent.max_version:
-                parts.append(f"versions={ent.min_version or '*'}..{ent.max_version or '*'}")
-            if ent.platforms:
-                parts.append(f"platforms={','.join(ent.platforms)}")
-            if ent.seats:
-                parts.append(f"seats={ent.seats}")
-            click.echo("  " + " ".join(parts))
+            click.echo(_format_entitlement(ent))
     else:
         click.echo("  Entitlements    : none (applies to all applications)")
 
