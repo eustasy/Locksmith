@@ -286,3 +286,60 @@ async def test_floating_activate_then_deactivate_releases_seat(client):
 
     r3 = await _activate(client, lid, machine_id="sess-2")
     assert r3.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_activate_uses_entitlement_seat_override(client):
+    """A matched entitlement's seats override the (absent) license-level limit."""
+    lic = await _issue_license(client, entitlements=[{"app_id": "com.example.app", "seats": 1}])
+    lid = lic["license_id"]
+
+    r1 = await _activate(client, lid, machine_id="m1")  # app_id defaults to com.example.app
+    assert r1.status_code == 200, r1.text
+    body = r1.json()
+    assert body["app_id"] == "com.example.app"  # matched entitlement, not the "*" wildcard
+    assert body["limit"] == 1  # comes from the entitlement's seats, not a license-level limit
+    assert body["active_count"] == 1
+
+    r2 = await _activate(client, lid, machine_id="m2")
+    assert r2.status_code == 403
+    assert "Limit of 1 reached for 'com.example.app'" in r2.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_activate_validation_failure_returns_403(client):
+    """A constraint violation (here: edition) surfaces as 403 from validate_license."""
+    lid = (await _issue_license(client, editions=["pro"]))["license_id"]
+    r = await _activate(client, lid, machine_id="m1")  # no edition supplied → not permitted
+    assert r.status_code == 403
+    assert "not permitted" in r.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_deactivate_unknown_license_returns_404(client):
+    r = await client.post("/deactivate", json={"license_id": "does-not-exist", "app_id": "*", "machine_id": "m1"})
+    assert r.status_code == 404
+    assert "not found" in r.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_deactivate_missing_machine_id_returns_422(client):
+    lid = (await _issue_license(client, restriction="activations", activation_limit=1))["license_id"]
+    r = await client.post("/deactivate", json={"license_id": lid, "app_id": "*"})  # no machine_id
+    assert r.status_code == 422
+    assert "machine_id is required" in r.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_deactivate_users_mode(client):
+    lid = (await _issue_license(client, restriction="users", user_limit=1))["license_id"]
+
+    # users restriction without user_principal → 422
+    r = await client.post("/deactivate", json={"license_id": lid, "app_id": "*"})
+    assert r.status_code == 422
+    assert "user_principal is required" in r.json()["detail"]
+
+    # with user_principal but no active activation to release → 404
+    r2 = await client.post("/deactivate", json={"license_id": lid, "app_id": "*", "user_principal": "bob@co.com"})
+    assert r2.status_code == 404
+    assert "Active activation not found" in r2.json()["detail"]

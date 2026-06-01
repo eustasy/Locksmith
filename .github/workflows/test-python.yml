@@ -34,6 +34,12 @@ jobs:
         run: pip install -e ".[dev]"
 
       - name: Run pytest with coverage
+        # coverage.py's default C tracer under-counts `async def` bodies, so async
+        # routes (e.g. the /activate pipeline) look far less covered than they are.
+        # The sys.monitoring backend (PEP 669, Python 3.12+) measures them
+        # correctly; 3.11 lacks sys.monitoring, so it keeps the default tracer.
+        env:
+          COVERAGE_CORE: ${{ startsWith(matrix.python-version, '3.11') && 'ctrace' || 'sysmon' }}
         run: pytest --cov --cov-report=xml:coverage/cobertura.xml
 
       - name: Upload coverage to Qlty
