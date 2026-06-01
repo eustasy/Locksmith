@@ -42,3 +42,7 @@ jobs:
         with:
           coverage-token: ${{ secrets.QLTY_COVERAGE_TOKEN }}
           files: coverage/cobertura.xml
+          # Coverage is measured with source=["locksmith"], so cobertura paths are
+          # relative to the package (api/app.py). Prepend the package dir so they
+          # resolve against the repo root (locksmith/api/app.py).
+          add-prefix: locksmith
