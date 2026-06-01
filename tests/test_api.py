@@ -10,7 +10,7 @@ from io import BytesIO
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from locksmith.core.license import License, TimePolicy, VersionPolicy
+from locksmith.core.license import Entitlement, License, LicenseRequest, TimePolicy, VersionPolicy
 from locksmith.core.signer import sign_license
 
 
@@ -145,6 +145,96 @@ async def test_validate_wrong_extension_rejected(client):
         files={"file": ("license.txt", BytesIO(b"{}"), "text/plain")},
     )
     assert resp.status_code == 422
+
+
+async def _sign_lic(file_signer, **overrides) -> License:
+    defaults = {
+        "license_id": str(uuid.uuid4()),
+        "email": "offline@example.com",
+        "issued_at": datetime.now(UTC),
+        "valid_from": datetime.now(UTC),
+        "time_policy": TimePolicy.PERPETUAL,
+        "version_policy": VersionPolicy.ANY,
+    }
+    defaults.update(overrides)
+    lic = License(**defaults)
+    await sign_license(lic, file_signer)
+    return lic
+
+
+def _upload(content: bytes, filename: str):
+    return {"file": (filename, BytesIO(content), "application/json")}
+
+
+@pytest.mark.asyncio
+async def test_validate_invalid_license_returns_valid_false(client, file_signer):
+    """A signed-but-expired license parses fine but fails the rules → 200 with valid=False."""
+    lic = await _sign_lic(file_signer, time_policy=TimePolicy.LIMITED, expires_at=datetime.now(UTC) - timedelta(days=1))
+    resp = await client.post("/validate", files=_upload(lic.to_json().encode("utf-8"), "license.lic"))
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["valid"] is False
+    assert "expired" in body["error"].lower()
+    assert body["license_id"] == lic.license_id
+
+
+@pytest.mark.asyncio
+async def test_validate_matched_entitlement_reported(client, file_signer):
+    lic = await _sign_lic(file_signer, entitlements=[Entitlement(app_id="com.example.app")])
+    resp = await client.post(
+        "/validate",
+        files=_upload(lic.to_json().encode("utf-8"), "license.lic"),
+        data={"app_id": "com.example.app"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["valid"] is True
+    assert body["matched_app_id"] == "com.example.app"
+
+
+@pytest.mark.asyncio
+async def test_validate_unparseable_file_returns_422(client):
+    resp = await client.post("/validate", files=_upload(b"not json at all", "license.lic"))
+    assert resp.status_code == 422
+    assert "could not parse license" in resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_validate_oversize_file_returns_413(client):
+    too_big = b"x" * (64 * 1024 + 1)
+    resp = await client.post("/validate", files=_upload(too_big, "big.lic"))
+    assert resp.status_code == 413
+    assert "too large" in resp.json()["detail"].lower()
+
+
+# ---------------------------------------------------------------------------
+# Request submission (/request)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_submit_request_queues_lsreq(client):
+    req = LicenseRequest.new(email="customer@co.com", machine_id="m-hash", app_version="2.0.0", app_id="com.example.app")
+    resp = await client.post("/request", files=_upload(req.to_json().encode("utf-8"), "req.lsreq"))
+    assert resp.status_code == 202
+    body = resp.json()
+    assert body["status"] == "queued"
+    assert body["email"] == "customer@co.com"
+
+
+@pytest.mark.asyncio
+async def test_submit_request_unparseable_returns_422(client):
+    resp = await client.post("/request", files=_upload(b"}{ not json", "req.lsreq"))
+    assert resp.status_code == 422
+    assert "could not parse request" in resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_submit_request_oversize_returns_413(client):
+    too_big = b"x" * (64 * 1024 + 1)
+    resp = await client.post("/request", files=_upload(too_big, "big.lsreq"))
+    assert resp.status_code == 413
+    assert "too large" in resp.json()["detail"].lower()
 
 
 # ---------------------------------------------------------------------------
