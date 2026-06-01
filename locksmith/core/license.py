@@ -99,6 +99,15 @@ class Entitlement:
         )
 
 
+def _to_utc(dt: datetime) -> datetime:
+    """Normalise a datetime to aware UTC; naive values are assumed to already be UTC.
+
+    Keeps the signed payload stable across stores that drop tzinfo (e.g. SQLite, which
+    returns naive datetimes), so a license still verifies after a database round-trip.
+    """
+    return dt.replace(tzinfo=UTC) if dt.tzinfo is None else dt.astimezone(UTC)
+
+
 @dataclass(kw_only=True, eq=False)
 class License:
     """In-memory representation of a signed license.
@@ -135,6 +144,9 @@ class License:
     signature: str | None = None
 
     def __post_init__(self) -> None:
+        self.issued_at = _to_utc(self.issued_at)
+        self.valid_from = _to_utc(self.valid_from)
+        self.expires_at = _to_utc(self.expires_at) if self.expires_at is not None else None
         self.time_policy = TimePolicy(self.time_policy)
         self.version_policy = VersionPolicy(self.version_policy)
         self.restriction = RestrictionMode(self.restriction) if self.restriction is not None else None
