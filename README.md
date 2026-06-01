@@ -1,8 +1,11 @@
 Locksmith
 =========
 
-[![Tests](https://github.com/eustasy/Locksmith/actions/workflows/test.yml/badge.svg)](https://github.com/eustasy/Locksmith/actions/workflows/test.yml)
-[![Lint](https://github.com/eustasy/Locksmith/actions/workflows/lint.yml/badge.svg)](https://github.com/eustasy/Locksmith/actions/workflows/lint.yml)
+[![Normal (Python)](https://github.com/eustasy/Locksmith/actions/workflows/python.yml/badge.svg)](https://github.com/eustasy/Locksmith/actions/workflows/python.yml)
+[![Test (Python)](https://github.com/eustasy/Locksmith/actions/workflows/test-python.yml/badge.svg)](https://github.com/eustasy/Locksmith/actions/workflows/test-python.yml)
+[![Normal (Security)](https://github.com/eustasy/Locksmith/actions/workflows/security.yml/badge.svg)](https://github.com/eustasy/Locksmith/actions/workflows/security.yml)
+[![Maintainability](https://qlty.sh/gh/eustasy/projects/Locksmith/maintainability.svg)](https://qlty.sh/gh/eustasy/projects/Locksmith)
+[![Code Coverage](https://qlty.sh/gh/eustasy/projects/Locksmith/coverage.svg)](https://qlty.sh/gh/eustasy/projects/Locksmith)
 
 Cross-platform software license validation backend. Supports online activation
 via a REST API and fully offline validation via signed license files. No frontend
