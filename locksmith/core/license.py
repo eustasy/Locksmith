@@ -25,6 +25,7 @@ specific application.
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
@@ -98,52 +99,48 @@ class Entitlement:
         )
 
 
+@dataclass(kw_only=True, eq=False)
 class License:
-    """In-memory representation of a signed license."""
+    """In-memory representation of a signed license.
 
-    def __init__(
-        self,
-        *,
-        license_id: str,
-        email: str,
-        issued_at: datetime,
-        valid_from: datetime,
-        # Time
-        time_policy: TimePolicy | str = TimePolicy.PERPETUAL,
-        expires_at: datetime | None = None,
-        # Version
-        version_policy: VersionPolicy | str = VersionPolicy.ANY,
-        major_version: int | None = None,
-        locked_version: str | None = None,
-        # Edition / Platform (top-level defaults; entitlement-level can override)
-        editions: list[str] | None = None,
-        platforms: list[str] | None = None,
-        # Restriction
-        restriction: RestrictionMode | str | None = None,
-        activation_limit: int | None = None,
-        user_limit: int | None = None,
-        concurrent_limit: int | None = None,
-        # Per-application entitlements
-        entitlements: list[Entitlement] | None = None,
-        signature: str | None = None,
-    ) -> None:
-        self.license_id = license_id
-        self.email = email
-        self.issued_at = issued_at
-        self.valid_from = valid_from
-        self.time_policy = TimePolicy(time_policy)
-        self.expires_at = expires_at
-        self.version_policy = VersionPolicy(version_policy)
-        self.major_version = major_version
-        self.locked_version = locked_version
-        self.editions = [e.lower() for e in editions] if editions is not None else None
-        self.platforms = [p.lower() for p in platforms] if platforms is not None else None
-        self.restriction = RestrictionMode(restriction) if restriction is not None else None
-        self.activation_limit = activation_limit
-        self.user_limit = user_limit
-        self.concurrent_limit = concurrent_limit
-        self.entitlements: list[Entitlement] = entitlements or []
-        self.signature = signature
+    Keyword-only construction. ``__post_init__`` coerces the policy strings to
+    enums, lowercases the edition/platform lists, and defaults missing entitlements
+    to an empty list, so equivalent string or enum inputs (e.g. loaded from JSON)
+    normalise identically. The instance stays mutable — signing assigns
+    ``signature`` after construction. ``eq=False`` keeps identity-based equality
+    and hashing (no field-wise ``__eq__`` is generated).
+    """
+
+    license_id: str
+    email: str
+    issued_at: datetime
+    valid_from: datetime
+    # Time
+    time_policy: TimePolicy | str = TimePolicy.PERPETUAL
+    expires_at: datetime | None = None
+    # Version
+    version_policy: VersionPolicy | str = VersionPolicy.ANY
+    major_version: int | None = None
+    locked_version: str | None = None
+    # Edition / Platform (top-level defaults; entitlement-level can override)
+    editions: list[str] | None = None
+    platforms: list[str] | None = None
+    # Restriction
+    restriction: RestrictionMode | str | None = None
+    activation_limit: int | None = None
+    user_limit: int | None = None
+    concurrent_limit: int | None = None
+    # Per-application entitlements
+    entitlements: list[Entitlement] | None = None
+    signature: str | None = None
+
+    def __post_init__(self) -> None:
+        self.time_policy = TimePolicy(self.time_policy)
+        self.version_policy = VersionPolicy(self.version_policy)
+        self.restriction = RestrictionMode(self.restriction) if self.restriction is not None else None
+        self.editions = [e.lower() for e in self.editions] if self.editions is not None else None
+        self.platforms = [p.lower() for p in self.platforms] if self.platforms is not None else None
+        self.entitlements = self.entitlements or []
 
     # ------------------------------------------------------------------
     # Serialisation
