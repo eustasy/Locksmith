@@ -72,6 +72,30 @@ def test_save_keypair_succeeds_without_permission_bit_assertions_on_non_posix(ke
     assert loaded_pubkey == pubkey
 
 
+def test_save_keypair_non_posix_branch(keypair, tmp_path, monkeypatch):
+    """Force the non-POSIX path (plain write_bytes, no fd/chmod) on a POSIX host.
+
+    Only ``keys``'s view of ``os`` reports ``name == 'nt'``; the real ``os`` is left
+    alone so ``pathlib`` still produces a usable ``PosixPath`` on this host.
+    """
+    import locksmith.core.keys as keys
+
+    class _NonPosixOS:
+        name = "nt"
+
+        def __getattr__(self, attr):
+            return getattr(os, attr)
+
+    monkeypatch.setattr(keys, "os", _NonPosixOS())
+    pubkey, privkey = keypair
+    priv_path, pub_path = save_keypair(pubkey, privkey, tmp_path / "keys")
+
+    assert priv_path.exists()
+    assert pub_path.exists()
+    assert rsa.PrivateKey.load_pkcs1(priv_path.read_bytes()) == privkey
+    assert rsa.PublicKey.load_pkcs1(pub_path.read_bytes()) == pubkey
+
+
 def test_load_pkcs1_raises_for_corrupted_key_files(tmp_path):
     priv_path = tmp_path / "id_rsa"
     pub_path = tmp_path / "id_rsa.pub"

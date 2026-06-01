@@ -433,3 +433,65 @@ async def test_deactivate_users_mode(client):
     r2 = await client.post("/deactivate", json={"license_id": lid, "app_id": "*", "user_principal": "bob@co.com"})
     assert r2.status_code == 404
     assert "Active activation not found" in r2.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_activate_reactivates_after_deactivate(client):
+    """Re-activating a previously-released identity reuses (un-revokes) its row."""
+    lid = (await _issue_license(client, restriction="activations", activation_limit=1))["license_id"]
+    assert (await _activate(client, lid, machine_id="m1")).status_code == 200
+
+    deact = await client.post("/deactivate", json={"license_id": lid, "app_id": "*", "machine_id": "m1"})
+    assert deact.status_code == 204
+
+    r = await _activate(client, lid, machine_id="m1")
+    assert r.status_code == 200
+    assert r.json()["active_count"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Admin auth + not-found branches
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_admin_requires_configured_key(client):
+    """With a bearer token but no admin key configured server-side → 503."""
+    from locksmith.core.config import settings
+
+    original = settings.admin_api_key
+    settings.admin_api_key = ""
+    try:
+        resp = await client.post("/licenses", json={}, headers={"Authorization": "Bearer anything"})
+        assert resp.status_code == 503
+        assert "not configured" in resp.json()["detail"].lower()
+    finally:
+        settings.admin_api_key = original
+
+
+@pytest.mark.asyncio
+async def test_get_unknown_license_returns_404(client):
+    from locksmith.core.config import settings
+
+    original = settings.admin_api_key
+    settings.admin_api_key = "testkey123"
+    try:
+        resp = await client.get("/licenses/no-such-id", headers={"Authorization": "Bearer testkey123"})
+        assert resp.status_code == 404
+        assert "not found" in resp.json()["detail"].lower()
+    finally:
+        settings.admin_api_key = original
+
+
+@pytest.mark.asyncio
+async def test_revoke_unknown_license_returns_404(client):
+    from locksmith.core.config import settings
+
+    original = settings.admin_api_key
+    settings.admin_api_key = "testkey123"
+    try:
+        resp = await client.delete("/licenses/no-such-id", headers={"Authorization": "Bearer testkey123"})
+        assert resp.status_code == 404
+        assert "not found" in resp.json()["detail"].lower()
+    finally:
+        settings.admin_api_key = original

@@ -347,3 +347,36 @@ async def test_verify_only_signer_cannot_sign(verify_only_signer):
     lic = _make_license()
     with pytest.raises(ValueError, match="no private key"):
         await sign_license(lic, verify_only_signer)
+
+
+# ---------------------------------------------------------------------------
+# Defensive / edge branches
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_naive_datetimes_treated_as_utc(file_signer):
+    """valid_from / expires_at without tzinfo are assumed to be UTC during validation."""
+    lic = _make_license(time_policy=TimePolicy.LIMITED)
+    naive_utc = datetime.now(UTC).replace(tzinfo=None)
+    lic.valid_from = naive_utc - timedelta(hours=1)
+    lic.expires_at = naive_utc + timedelta(hours=1)
+    await sign_license(lic, file_signer)  # re-sign so the signature matches the mutated payload
+    await validate_license(lic, file_signer)  # currently valid → must not raise
+
+
+@pytest.mark.asyncio
+async def test_specific_policy_requires_app_version(file_signer):
+    lic = _make_license(version_policy=VersionPolicy.SPECIFIC, locked_version="2.0.0")
+    await sign_license(lic, file_signer)
+    with pytest.raises(LicenseVersionError, match="app_version is required"):
+        await validate_license(lic, file_signer)  # no app_version supplied
+
+
+@pytest.mark.asyncio
+async def test_entitlement_version_range_requires_app_version(file_signer):
+    ent = Entitlement(app_id="com.app", min_version="2.0.0")
+    lic = _make_license(entitlements=[ent])
+    await sign_license(lic, file_signer)
+    with pytest.raises(LicenseVersionError, match="app_version is required"):
+        await validate_license(lic, file_signer, app_id="com.app")  # matches, but no app_version
