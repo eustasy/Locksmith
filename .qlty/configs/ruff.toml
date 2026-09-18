@@ -24,22 +24,6 @@ select = [
 [lint.isort]
 known-first-party = []
 
-[lint.flake8-bugbear]
-# FastAPI declares dependencies/params as call expressions in argument defaults
-# (Depends/Security/File/Form/...). That is the framework's required idiom, so
-# exempt them from B008 ("function call in default argument").
-extend-immutable-calls = [
-  "fastapi.Body",
-  "fastapi.Cookie",
-  "fastapi.Depends",
-  "fastapi.File",
-  "fastapi.Form",
-  "fastapi.Header",
-  "fastapi.Path",
-  "fastapi.Query",
-  "fastapi.Security",
-]
-
 [format]
 quote-style = "double"
 indent-style = "space"
