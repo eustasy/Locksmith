@@ -9,7 +9,6 @@ entirely and reuses the session keypair.
 from __future__ import annotations
 
 import asyncio
-from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
@@ -45,12 +44,12 @@ def test_generates_loadable_keypair(runner, tmp_path):
     assert asyncio.run(signer.verify(b"payload", sig)) is True
 
 
-def test_default_out_dir_is_keys(runner):
-    with runner.isolated_filesystem():
-        result = runner.invoke(setup_cli.main, ["--bits", "1024"])
-        assert result.exit_code == 0, result.output
-        assert Path("keys/privkey.pem").exists()
-        assert Path("keys/pubkey.pem").exists()
+def test_default_out_dir_is_keys(runner, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(setup_cli.main, ["--bits", "1024"])
+    assert result.exit_code == 0, result.output
+    assert (tmp_path / "keys" / "privkey.pem").exists()
+    assert (tmp_path / "keys" / "pubkey.pem").exists()
 
 
 def test_bits_and_out_dir_forwarded(runner, keypair, monkeypatch):

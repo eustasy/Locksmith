@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
@@ -74,14 +73,14 @@ def test_basic_perpetual(runner, keyfiles, verify_signer, tmp_path):
     assert "Entitlements    : none (applies to all applications)" in r.output
 
 
-def test_default_output_filename(runner, keyfiles, verify_signer):
-    with runner.isolated_filesystem():
-        r = runner.invoke(generate_cli.main, ["--email", "user@co.com"])
-        assert r.exit_code == 0, r.output
-        # Default name is {safe_email}_{id8}.lic
-        matches = list(Path().glob("user_co_com_*.lic"))
-        assert len(matches) == 1
-        assert _validate(matches[0], verify_signer).email == "user@co.com"
+def test_default_output_filename(runner, keyfiles, verify_signer, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    r = runner.invoke(generate_cli.main, ["--email", "user@co.com"])
+    assert r.exit_code == 0, r.output
+    # Default name is {safe_email}_{id8}.lic
+    matches = list(tmp_path.glob("user_co_com_*.lic"))
+    assert len(matches) == 1
+    assert _validate(matches[0], verify_signer).email == "user@co.com"
 
 
 # ---------------------------------------------------------------------------
