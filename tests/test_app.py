@@ -11,7 +11,7 @@ from locksmith.core.keys import FileSigner, save_keypair
 
 def test_create_app_wires_routes_and_limiter():
     app = app_module.create_app()
-    # FastAPI >=0.138 includes routers lazily (`_IncludedRouter` placeholders in
+    # FastAPI >=0.137 includes routers lazily (`_IncludedRouter` placeholders in
     # `app.routes` have no `.path`), so read the paths off the OpenAPI schema.
     paths = set(app.openapi()["paths"])
     assert {"/health", "/activate", "/deactivate", "/validate", "/request"} <= paths
