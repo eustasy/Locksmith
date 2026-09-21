@@ -64,9 +64,7 @@ def test_writes_request_with_all_fields(runner, fake_machine_id, tmp_path):
     assert "Send this file to your software vendor" in result.output
 
 
-def test_default_output_filename_and_optional_app_id(
-    runner, fake_machine_id, tmp_path, monkeypatch
-):
+def test_default_output_filename_and_optional_app_id(runner, fake_machine_id, tmp_path, monkeypatch):
     """With --out and --app-id omitted: filename is derived from the email, app_id is None."""
     monkeypatch.chdir(tmp_path)
     result = runner.invoke(
