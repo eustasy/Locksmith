@@ -27,22 +27,22 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 
-class TimePolicy(str, Enum):
+class TimePolicy(StrEnum):
     PERPETUAL = "perpetual"
     LIMITED = "limited"
 
 
-class VersionPolicy(str, Enum):
+class VersionPolicy(StrEnum):
     ANY = "any"
     MAINTENANCE = "maintenance"  # must share same major version as major_version
     SPECIFIC = "specific"  # must match locked_version exactly
 
 
-class RestrictionMode(str, Enum):
+class RestrictionMode(StrEnum):
     ACTIVATIONS = "activations"  # max N distinct machines
     USERS = "users"  # max N distinct named user principals
     FLOATING = "floating"  # max N concurrent sessions (check-out / check-in)
