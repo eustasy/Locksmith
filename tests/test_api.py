@@ -179,6 +179,16 @@ async def test_validate_invalid_license_returns_valid_false(client, file_signer)
 
 
 @pytest.mark.asyncio
+async def test_validate_malformed_signature_returns_valid_false(client, file_signer):
+    """A signature that is not base64 is an invalid license, not a server error."""
+    lic = await _sign_lic(file_signer)
+    lic.signature = "abc"
+    resp = await client.post("/validate", files=_upload(lic.to_json().encode("utf-8"), "license.lic"))
+    assert resp.status_code == 200
+    assert resp.json()["valid"] is False
+
+
+@pytest.mark.asyncio
 async def test_validate_matched_entitlement_reported(client, file_signer):
     lic = await _sign_lic(file_signer, entitlements=[Entitlement(app_id="com.example.app")])
     resp = await client.post(

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import secrets
+
 from fastapi import HTTPException, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
@@ -19,7 +21,7 @@ async def require_admin(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Admin API key is not configured on this server.",
         )
-    if credentials.credentials != settings.admin_api_key:
+    if not secrets.compare_digest(credentials.credentials.encode(), settings.admin_api_key.encode()):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or missing API key.",
