@@ -193,10 +193,13 @@ locksmith-issue --email user@example.com \
 | `GET` | `/licenses/{id}` | Admin | Retrieve license metadata, entitlements, and usage counts. |
 | `DELETE` | `/licenses/{id}` | Admin | Revoke a license immediately. |
 | `POST` | `/activate` | None | Online activation — verifies the license and records the machine or user against the appropriate limit. |
+| `POST` | `/deactivate` | None | Release a seat held by a machine or user. Required for floating licenses; optional otherwise. |
 | `POST` | `/validate` | None | Offline validation — accepts a `.lic` file upload and returns a verification result. |
-| `POST` | `/request` | None | Accept a customer `.lsreq` file and queue it for vendor review. |
+| `POST` | `/request` | None | Accept a customer `.lsreq` file and store it in the `license_requests` table for vendor review. |
 
-**`POST /activate` fields:** `license_id`, `machine_id`, `app_id`, `app_version`, `edition` (optional), `platform` (optional).
+**`POST /activate` fields:** `license_id`, `machine_id` (or `user_principal` for a `users`-restricted license), `app_id`, `app_version`, `edition` (optional), `platform` (optional).
+
+**`POST /deactivate` fields:** `license_id`, `machine_id` (or `user_principal`), `app_id` — the `app_id` the activation was recorded under, `*` for a license with no entitlements.
 
 **`POST /validate` form fields:** `file` (`.lic`), `app_version`, `app_id`, `edition`, `platform` — all optional except `file`.
 
