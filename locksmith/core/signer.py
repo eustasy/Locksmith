@@ -23,6 +23,7 @@ against database counts happens in ``routes/activate.py``.
 from __future__ import annotations
 
 import base64
+import binascii
 from datetime import UTC, datetime
 
 from locksmith.core.keys import BaseSigner
@@ -105,7 +106,11 @@ async def verify_license_signature(license: License, signer: BaseSigner) -> None
         raise LicenseMissingSignatureError("License has no signature.")
 
     payload = license.signable_payload()
-    raw_sig = base64.urlsafe_b64decode(license.signature.encode("ascii"))
+    try:
+        raw_sig = base64.urlsafe_b64decode(license.signature.encode("ascii"))
+    except (binascii.Error, ValueError) as exc:
+        # A signature that is not base64 cannot match; UnicodeEncodeError is a ValueError.
+        raise LicenseVerificationError("License signature verification failed.") from exc
     ok = await signer.verify(payload, raw_sig)
     if not ok:
         raise LicenseVerificationError("License signature verification failed.")
