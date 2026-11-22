@@ -65,6 +65,14 @@ async def test_missing_signature_raises(file_signer):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("signature", ["abc", "not base64 \u2603", "!!!!"])
+async def test_malformed_signature_raises_verification_error(file_signer, signature):
+    lic = _make_license(signature=signature)
+    with pytest.raises(LicenseVerificationError):
+        await validate_license(lic, file_signer)
+
+
+@pytest.mark.asyncio
 async def test_tampered_email_raises(file_signer):
     lic = _make_license()
     await sign_license(lic, file_signer)

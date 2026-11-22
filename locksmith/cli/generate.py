@@ -272,7 +272,7 @@ def _print_summary(lic: License) -> None:
     "--request-file",
     default=None,
     type=click.Path(exists=True),
-    help="Import email / machine_id from a customer .lsreq file.",
+    help="Import email / app_id from a customer .lsreq file.",
 )
 @click.option(
     "--privkey",

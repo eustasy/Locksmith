@@ -4,9 +4,9 @@
     and business rules without touching the database. Suitable for air-gapped
     environments where the client cannot call ``/activate``.
 
-``POST /request`` — accepts a ``.lsreq`` file upload and queues it for vendor
-    review. No authentication required; the vendor uses the admin CLI to
-    fulfil pending requests.
+``POST /request`` — accepts a ``.lsreq`` file upload and stores it in the
+    ``license_requests`` table for vendor review. No authentication required.
+    Nothing in Locksmith reads the table back; the vendor queries it directly.
 """
 
 from __future__ import annotations
